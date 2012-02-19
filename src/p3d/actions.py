@@ -94,15 +94,31 @@ class actions:
     Drop object that player is currently carrying.
     """
 
+    # Determine if there is a tile in front of the player.
+    # We can't throw stuff past walls so.
+    tilePos = self.player.getTilePos()
+    for i in range(len(self.player.direction)):
+      tilePos[i] += self.player.direction[i]
+
+    for x in base.tilePositions:
+      if not x['solid']: continue
+      if tilePos == x['pos']: return None
+
+    # Set player speed back to original.
     self.player.moveSpeed = self.origMoveSpeed
 
+    # Set Throwing direction.
     self.thrownDir = self.player.direction
 
+    # If player is not carrying anything reset pickupObj.
     if not self.pickupObj: return None
+
+    # 
     taskMgr.remove("Player_" + str(self.player.id) + "_Action_Pickup")
 
     # TODO: Drop animation here.
 
+    # Use Projectile Intveral on non player objects
     if not self.pickupObjIsPlayer:
       self.throwInt = ProjectileInterval(self.pickupObj,
                          startPos = self.pickupObj.getPos(),
@@ -113,10 +129,14 @@ class actions:
     self.thrownObj = self.pickupObj
     self.pickupObj = None
 
+    # If not player add task to check if thrown object hits another player and then later remove it.
     if not self.pickupObjIsPlayer:
       taskMgr.doMethodLater(1.4, self.removePickup, "Player_" + str(self.player.id) + "_Action_FadePickup", extraArgs=[self.thrownObj], appendTask=False)
       taskMgr.add(self.thrownObjLoop, "Player_" + str(self.player.id) + "_Action_ThrownObjCheck")
+
+    # If player release the player and have them move in a direction and fall down.
     else:
+    
         taskMgr.add(self.pickupObjPlayer.moveLoop, "Player_" + str(self.pickupObjPlayer.id) + "_MoveLoop")
         #taskMgr.add(self.pickupObjPlayer.fallLoop, "Player_" + str(self.pickupObjPlayer.id) + "_FallLoop")
         

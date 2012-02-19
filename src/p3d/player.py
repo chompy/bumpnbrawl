@@ -209,12 +209,40 @@ class player:
         self.movement = [0, 0]
         self.isMove = [False, False]
 
-        ct = 0
-        while self.colWithTile(tilePos) and ct < 200:
-          for i in range(len(self.moveVal)):
-            pos[i] -= 0.01 * self.moveVal[i]
-          ct += 1
-          self.actor.setFluidPos(pos)
+        tileP = {}
+
+        # Tile sides.
+        tileP[0] = x['pos'] * 2.0
+        tileP[0][1] += 1.0
+
+        tileP[1] = x['pos'] * 2.0
+        tileP[1][1] -= 1.0
+
+        tileP[2] = x['pos'] * 2.0
+        tileP[2][0] -= 1.0
+
+        tileP[3] = x['pos'] * 2.0
+        tileP[3][0] += 1.0
+
+        # Determine which side player is closest too.
+        maxDistance = 9999
+        maxPos = (0,0,0)
+        for i in tileP:
+          newPos = tileP[i]
+          distance = abs(math.sqrt(((pos[0] - newPos[0]) ** 2) + ((pos[1] - newPos[1]) ** 2)))
+          if distance < maxDistance:
+            maxDistance = distance
+            maxPos = newPos
+
+        # Determine which axis player should be repositioned on.
+        for x in tileP:
+          if tileP[x] == maxPos:
+            if x < 2:
+              pos[1] = maxPos[1] - (self.direction[1] * 1.0) 
+            else:
+              pos[0] = maxPos[0] - (self.direction[0] * 1.0)
+            break             
+        
 
     # Check for collision with players
     if not self.isKnockback:
