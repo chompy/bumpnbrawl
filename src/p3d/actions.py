@@ -97,12 +97,15 @@ class actions:
     # Determine if there is a tile in front of the player.
     # We can't throw stuff past walls so.
     tilePos = self.player.getTilePos()
+    tilePos2 = self.player.getTilePos()
     for i in range(len(self.player.direction)):
       tilePos[i] += self.player.direction[i]
+      tilePos2[i] += self.player.direction[i] * 2.0
 
     for x in base.tilePositions:
       if not x['solid']: continue
       if tilePos == x['pos']: return None
+      if tilePos2 == x['pos']: return None      
 
     # Set player speed back to original.
     self.player.moveSpeed = self.origMoveSpeed
