@@ -1,6 +1,6 @@
 from direct.actor.Actor import Actor
 from lib import basePolling
-import math,random, os, actions
+import math,random, os, actions, ConfigParser
 
 GRAVITY = .5
 
@@ -16,9 +16,41 @@ class player:
     base.playerid += 1
     self.id = base.playerid
 
+    # Load Animations
+    charDir = os.listdir(base.assetPath + "/characters/" + character)
+    animations = {}
+    for filename in charDir:
+      ext = filename.split(".")[len(filename.split(".")) - 1]
+      filename = filename.split(".")[:len(filename.split(".")) - 1]
+      if not ext == base.charExt: continue
+      anim = filename[0].replace("model-", "")
+      if anim.strip():
+        animations[anim] = base.assetPath + "/characters/" + character + "/" + filename[0] + "." + base.charExt
+
+    # Load Animation Configs
+    self.animConfig = {}
+    if os.path.exists(base.assetPath + "/characters/" + character + "/animation.ini"):
+      animConfig = ConfigParser.ConfigParser()
+      animConfig.read(base.assetPath + "/characters/" + character + "/animation.ini")
+      for i in animConfig.sections():
+        for x in animConfig.options(i):
+          try:
+            self.animConfig[i][x] = animConfig.getint(i, x)
+          except KeyError:
+            self.animConfig[i] = {}
+            self.animConfig[i][x] = animConfig.getint(i, x)            
+     
+
     # Load Model
-    self.actor = Actor(base.assetPath + "/characters/" + character + "/model." + base.charExt, None)
+    self.actor = Actor(base.assetPath + "/characters/" + character + "/model." + base.charExt, animations)
     self.actor.reparentTo(render)
+
+    # Set Scale
+    scale = 1.0
+    if os.path.exists(base.assetPath + "/characters/" + character + "/scale.txt"):
+      scale = float(open(base.assetPath + "/characters/" + character + "/scale.txt").read())
+    self.actor.setScale(scale)
+
 
     # Load Texture
     skin = "default"
@@ -31,7 +63,13 @@ class player:
     self.dimensions = {}
     pos1, pos2 = self.actor.getTightBounds()   
     for i in range(len(pos1)):
-      self.dimensions[i] = pos2[i] - pos1[i]
+      self.dimensions[i] = (pos2[i] - pos1[i]) * scale
+
+    if os.path.exists(base.assetPath + "/characters/" + character + "/scale.txt"):
+      dimensions = open(base.assetPath + "/characters/" + character + "/dimensions.txt").read().split(",")
+      for i in range(len(self.dimensions)):
+        self.dimensions[i] = float(dimensions[i])
+
 
     # Vars
     self.moveVal = [0,0]
@@ -45,6 +83,11 @@ class player:
     self.isHeld = False
     self.reverseGravity = 0.0
     self.noCollide = None
+    self.animation = ""
+    self.loopAnimation = ""
+    self.isPlaying = False
+    self.animDefault = "idle"
+    self.animMove = "run"
 
     # Set Start Position
     self.startPos = base.playerStart[self.id - 1]
@@ -71,6 +114,9 @@ class player:
 
     taskMgr.add(self.moveLoop, "Player_" + str(self.id) + "_MoveLoop")   
     taskMgr.add(self.fallLoop, "Player_" + str(self.id) + "_FallLoop")
+
+    # Begin Animation
+    self.setAnim(self.animDefault, True)
     
   def move(self, val):
 
@@ -203,11 +249,13 @@ class player:
       if not x['solid']: continue
       #if not tilePos[2] == pos[2]: continue
       if x['id'] == 1: continue
-      
-      while (self.colWithTile(tilePos)):
+
+      ct = 0
+      while (self.colWithTile(tilePos) and ct < 200):
         for i in range(len(self.direction)):
           pos[i] -= self.moveVal[i] * 0.01
         self.actor.setFluidPos(pos)       
+        ct += 1
 
     # Check for collision with players
     if not self.isKnockback:
@@ -216,6 +264,7 @@ class player:
         if i == self.noCollide: continue
         if not i.actor.getZ() == pos[2]: continue
         if self.colWithNode(i.actor):
+        
           # Reverse Movement and swap momentum with other player.
           for x in range(len(self.moveVal)):
             pos[x] -= .4 * self.moveVal[x]
@@ -242,11 +291,33 @@ class player:
             i.local = False
             i.isKnockback = True
             taskMgr.add(i.knockback, "Player_" + str(i.id) + "Knockback")
+
+          # Drop Picked up Object
+          if self.actions.pickupObj:
+            self.actions.drop()            
                  
     # Update Position
     if not hasCollision:
       pos[0] += self.movement[0] * dt
       pos[1] += self.movement[1] * dt
+
+    # Animations
+
+    # Falling
+    if self.fallrate > 0.0:
+      self.setAnim("fall", True)
+    
+    # If moved by player the animation
+    elif self.isMove[0] or self.isMove[1]:
+      self.setAnim(self.animMove, True)
+          
+    # If knocked back by another force...
+    elif (self.moveVal[0] or self.moveVal[1]) and not self.moveVal == self.direction:
+      self.setAnim("bump", True)
+
+    # Otherwise play default animation.
+    else:
+      self.setAnim(self.animDefault, True)
 
     self.actor.setFluidPos(pos)    
 
@@ -336,6 +407,15 @@ class player:
     self.isKnockback = True
     return task.cont
 
+  def moveLock(self, task):
+
+    """
+    Unlocks movement.
+    """
+
+    self.local = True
+    return task.done
+
   def getTilePos(self, pos = None):
     
     """
@@ -409,4 +489,65 @@ class player:
     Reset player no collide flag.
     """
 
-    self.noCollide = None    
+    self.noCollide = None   
+
+  def setAnim(self, name, loop):
+
+    """
+    Set animation.
+    """
+
+    # Set Config Vars if not set
+    try:
+      self.animConfig[name]
+    except KeyError:
+      self.animConfig[name] = {}
+      self.animConfig[name]['start'] = 0
+      self.animConfig[name]['end'] = self.actor.getNumFrames(name)
+      self.animConfig[name]['loopfrom'] = 0
+      self.animConfig[name]['loopto'] = self.actor.getNumFrames(name)
+
+      
+    # Play one time animation.
+    if not loop:
+      self.actor.play(name)
+      self.isPlaying = True
+      self.animation = name
+      taskMgr.remove("Player_" + str(self.id) + "_AnimationDoneCheck")
+      taskMgr.add(self.getAnimDone, "Player_" + str(self.id) + "_AnimationDoneCheck")
+      return True
+
+    # For loops... if animation is already set then no need to restart it.
+    if self.animation == name: return None
+    
+    self.loopAnimation = name
+
+    # Play loop as long as there is no one time animations playing.
+
+    if not self.isPlaying:
+      self.animation = name
+      self.actor.loop(self.animation, restart = 0, fromFrame = self.animConfig[name]['loopfrom'], toFrame = self.animConfig[name]['loopto'])
+      return True
+      
+    return False
+
+  def getAnimDone(self, task):
+
+    """
+    Loops until animation is finished.
+    """
+    if not self.actor.getCurrentAnim():
+      self.isPlaying = False
+      return task.done
+          
+    if self.actor.getCurrentFrame(self.animation) >= self.animConfig[self.animation]['end'] - 1:
+      self.isPlaying = False
+      if not self.loopAnimation:
+        self.setAnim(self.animDefault, True)
+      else:
+        self.setAnim(self.loopAnimation, True)
+      
+      return task.done
+
+    return task.cont
+    

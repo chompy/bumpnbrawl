@@ -1,5 +1,6 @@
 from direct.interval.ProjectileInterval import ProjectileInterval
 from direct.interval.LerpInterval import LerpScaleInterval
+from direct.interval.LerpInterval import LerpPosInterval
 from pandac.PandaModules import Point3
 import math
 
@@ -18,6 +19,7 @@ class actions:
     self.pickupObj = None
     self.pickupObjIsPlayer = False
     self.pickupObjPlayer = None
+    self.disablePickup = False
     self.thrownObj = None
     self.origMoveSpeed = self.player.moveSpeed
 
@@ -30,8 +32,10 @@ class actions:
     if self.thrownObj: return None
 
     if taskMgr.hasTaskNamed("Player_" + str(self.player.id) + "_Action_Pickup"):
-      self.drop()
+      if self.player.moveVal == [0,0]: self.drop()
       return None
+
+    if self.disablePickup: return None
 
     pos = self.player.actor.getPos()
     tilepos = self.player.getTilePos()
@@ -46,7 +50,6 @@ class actions:
       if not x['solid']: continue
       if tilepos == x['pos']:
         x['solid'] = 0
-        taskMgr.add(self.pickupLoop, "Player_" + str(self.player.id) + "_Action_Pickup")
         self.pickupObj = x['node']
         self.pickupObjIsPlayer = False
         self.player.moveSpeed = self.player.moveSpeed / 2.0
@@ -61,9 +64,8 @@ class actions:
       for x in base.players:
         if x == self.player: continue
         if x.getTilePos() == testPos:
-          taskMgr.remove("Player_" + str(x.id) + "_MoveLoop")
-          #taskMgr.remove("Player_" + str(x.id) + "_FallLoop")    
-          taskMgr.add(self.pickupLoop, "Player_" + str(self.player.id) + "_Action_Pickup")
+          taskMgr.remove("Player_" + str(x.id) + "_MoveLoop")  
+
           self.pickupObjIsPlayer = True
           self.pickupObjPlayer = x
           self.pickupObj = x.actor
@@ -72,7 +74,33 @@ class actions:
 
     if not self.pickupObj: return None
 
-    # TODO: Pick up animation here.
+    else: 
+
+      pos = self.player.actor.getPos()
+      pos[2] += 2.0
+    
+      taskMgr.doMethodLater(.75, self.pickupLoop, "Player_" + str(self.player.id) + "_Action_Pickup")
+      lerpPickup = LerpPosInterval(
+        self.pickupObj,
+        .65,
+        pos
+      )
+      taskMgr.doMethodLater(.15, lerpPickup.start, "Player_" + str(self.player.id) + "_Action_PickupLerp", appendTask=False, extraArgs=[])
+
+      # Move Lock
+      if self.player.local:
+        self.player.local = False
+        pos = self.player.actor.getPos()
+        for i in range(len(self.player.direction)):
+          pos[i] -= self.player.direction[i] * .1
+        self.player.actor.setFluidPos(pos)
+        taskMgr.doMethodLater(.75, self.player.moveLock, "Player_" + str(self.player.id) + "MoveLock")
+
+      # Pick up animation here.
+      self.player.animMove = "lift-run"
+      self.player.animDefault = "lift-idle"
+
+      self.player.setAnim("lift", False)
 
   def pickupLoop(self, task):
 
@@ -116,13 +144,37 @@ class actions:
     # If player is not carrying anything reset pickupObj.
     if not self.pickupObj: return None
 
-    # 
+    # Remove Pick up task.
     taskMgr.remove("Player_" + str(self.player.id) + "_Action_Pickup")
 
-    # TODO: Drop animation here.
+    # Move Lock
+    if self.player.local:
+      self.player.local = False
+      taskMgr.doMethodLater(.35, self.player.moveLock, "Player_" + str(self.player.id) + "MoveLock")
+
+    # Throwing Animation
+    self.player.animMove = "run"
+    self.player.animDefault = "idle"
+
+    self.disablePickup = True
+    taskMgr.doMethodLater(1.0, self.restorePickup, "Player_" + str(self.player.id) + "_Action_DisablePickup") 
+
+    # If player dropped then use animation
+    if self.player.movement == [0,0]:
+      self.player.setAnim('throw', False)
+      taskMgr.doMethodLater(.25, self.doDrop, "Player_" + str(self.player.id) + "_Action_DropDelay", appendTask=False, extraArgs=[])
+
+    # If bump causes drop then instantly drop.
+    else: self.doDrop()
+
+  def doDrop(self):
+
+    """
+    Make actual dropping happen. (Delayed from drop method for animation).
+    """
 
     # Use Projectile Intveral on non player objects
-    if not self.pickupObjIsPlayer:
+    if not self.pickupObjIsPlayer and self.pickupObj:
       self.throwInt = ProjectileInterval(self.pickupObj,
                          startPos = self.pickupObj.getPos(),
                          startVel = Point3(self.thrownDir[0] * 10.0, self.thrownDir[1] * 10.0, 9.0), duration = 1.4)    
@@ -232,6 +284,15 @@ class actions:
     fade.start()
     taskMgr.doMethodLater(1.2, model.removeNode, "Player_" + str(self.player.id) + "_Action_DestroyPickup", extraArgs=[], appendTask=False)
     self.thrownObj = None
+
+  def restorePickup(self, task):
+
+    """
+    Restore pickup functionality.
+    """
+
+    self.disablePickup = False
+    return task.done
 
   def punch(self):
 
