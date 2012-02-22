@@ -246,6 +246,7 @@ class player:
 
       ct = 0
       while (self.colWithTile(tilePos) and ct < 200):
+        hasCollision = True
         for i in range(len(self.direction)):
           pos[i] -= self.moveVal[i] * 0.01
         self.actor.setFluidPos(pos)       
@@ -256,21 +257,23 @@ class player:
       for i in base.players:
         if i == self: continue
         if i == self.noCollide: continue
+        if i.isKnockback: continue
         if not i.actor.getZ() == pos[2]: continue
         if self.colWithNode(i.actor):
 
-          if i.moveVal == [0,0] and self.moveVal == [0,0]:
+          if i.movement == [0,0] and self.movement == [0,0]:
             # Push players off of each other
             ct = 0
             while (self.colWithNode(i.actor) and ct < 200):
               for x in range(len(self.direction)):
-                pos[x] += self.moveVal[x] * 0.01
+                pos[x] += i.direction[x] * -0.01
               self.actor.setFluidPos(pos)       
               ct += 1            
             pos[x] += self.moveVal[x] * 0.4
-            self.actor.setFluidPos(pos)              
-
+            self.actor.setFluidPos(pos)             
+            
           else:
+
             # Reverse Movement and swap momentum with other player.
             for x in range(len(self.moveVal)):
               pos[x] -= .4 * self.moveVal[x]
@@ -278,12 +281,20 @@ class player:
             for x in range(len(self.moveVal)):
               pmoveVal = self.moveVal[x]
               pmovement = self.movement[x]
-            
-              self.moveVal[x] = i.moveVal[x] * 1.5
-              self.movement[x] = i.movement[x] * 1.5
 
-              i.moveVal[x] = pmoveVal * 1.5
-              i.movement[x] = pmovement * 1.5
+              # Get player oppsite direction
+              oppDir = self.direction
+              for y in range(len(self.direction)):
+                oppDir[y] = self.direction[y] * -1
+
+              # Only move this player if he was stationary or the other player is moving 
+              # in the opposite direction.              
+              if self.movement == [0,0] or i.direction == oppDir:             
+                self.moveVal[x] = i.moveVal[x] * 1
+                self.movement[x] = i.movement[x] * (((i.power - self.resist) / 3.0) + .1)
+
+              i.moveVal[x] = pmoveVal * 1
+              i.movement[x] = pmovement * (((self.power - i.resist) / 3.0) + .1)
               
               self.isMove[x] = False
               i.isMove[x] = False
@@ -300,8 +311,9 @@ class player:
 
             # Drop Picked up Object
             if self.actions.pickupObj:
-              self.actions.drop()            
-                 
+              self.actions.drop()
+               
+           
     # Update Position
     if not hasCollision:
       pos[0] += self.movement[0] * dt
@@ -345,28 +357,20 @@ class player:
     dt = task.time - task.lastTime
 
     if not self.isHeld:
-      # Check tile below player
-      tilePos = self.getTilePos()
-      tilePos[2] -= 1
+
+      # Player Pos
+      pos = self.actor.getPos()
+      pos[2] -= 2.0
 
       # Determine if there is a tile or not
       falling = True
       for x in base.tilePositions:
-        if x['pos'] == tilePos and x['solid']:
+        if not x['solid']: continue
+        tilePos = x['pos'] * 2.0
+        if self.colWithBox(tilePos, [2.0,2.0,2.0], pos):
           falling = False
           self.actor.setFluidZ(x['pos'][2])          
           break
-
-      # Determine if there is a player
-      tilePos[2] += 1
-      for x in base.players:
-        if x == self: continue
-        if x.isHeld: continue
-        if x.getTilePos() == tilePos:
-          pos = x.getTilePos()
-          for y in range(len(x.direction)):
-            pos[y] -= x.direction[y]
-          x.actor.setFluidPos(pos * 2.0)
 
       if falling and self.fallrate <= 0.0: self.fallrate = .001
       elif not falling: self.fallrate = 0.0
@@ -467,13 +471,15 @@ class player:
 
     return self.colWithBox(pos, [2.0,2.0,2.0])
 
-  def colWithBox(self, pos, dimensions):
+  def colWithBox(self, pos, dimensions, myTestPos = None):
 
     """
     Check to see if there is a rect collision with a box.
     """
 
-    mypos = self.actor.getPos()
+    if myTestPos: mypos = myTestPos
+    else:
+      mypos = self.actor.getPos()
 
     width = dimensions[0]
     depth = dimensions[1]
