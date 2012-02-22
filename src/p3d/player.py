@@ -65,12 +65,6 @@ class player:
     for i in range(len(pos1)):
       self.dimensions[i] = (pos2[i] - pos1[i]) * scale
 
-    if os.path.exists(base.assetPath + "/characters/" + character + "/scale.txt"):
-      dimensions = open(base.assetPath + "/characters/" + character + "/dimensions.txt").read().split(",")
-      for i in range(len(self.dimensions)):
-        self.dimensions[i] = float(dimensions[i])
-
-
     # Vars
     self.moveVal = [0,0]
     self.movement = [0,0]
@@ -264,37 +258,49 @@ class player:
         if i == self.noCollide: continue
         if not i.actor.getZ() == pos[2]: continue
         if self.colWithNode(i.actor):
-        
-          # Reverse Movement and swap momentum with other player.
-          for x in range(len(self.moveVal)):
-            pos[x] -= .4 * self.moveVal[x]
-          
-          for x in range(len(self.moveVal)):
-            pmoveVal = self.moveVal[x]
-            pmovement = self.movement[x]
-          
-            self.moveVal[x] = i.moveVal[x] * 1.5
-            self.movement[x] = i.movement[x] * 1.5
 
-            i.moveVal[x] = pmoveVal * 1.5
-            i.movement[x] = pmovement * 1.5
+          if i.moveVal == [0,0] and self.moveVal == [0,0]:
+            # Push players off of each other
+            ct = 0
+            while (self.colWithNode(i.actor) and ct < 200):
+              for x in range(len(self.direction)):
+                pos[x] += self.moveVal[x] * 0.01
+              self.actor.setFluidPos(pos)       
+              ct += 1            
+            pos[x] += self.moveVal[x] * 0.4
+            self.actor.setFluidPos(pos)              
+
+          else:
+            # Reverse Movement and swap momentum with other player.
+            for x in range(len(self.moveVal)):
+              pos[x] -= .4 * self.moveVal[x]
             
-            self.isMove[x] = False
-            i.isMove[x] = False
+            for x in range(len(self.moveVal)):
+              pmoveVal = self.moveVal[x]
+              pmovement = self.movement[x]
+            
+              self.moveVal[x] = i.moveVal[x] * 1.5
+              self.movement[x] = i.movement[x] * 1.5
 
-          if self.local:
-            self.local = False
-            self.isKnockback = True
-            taskMgr.add(self.knockback, "Player_" + str(self.id) + "Knockback")
+              i.moveVal[x] = pmoveVal * 1.5
+              i.movement[x] = pmovement * 1.5
+              
+              self.isMove[x] = False
+              i.isMove[x] = False
 
-          if i.local:
-            i.local = False
-            i.isKnockback = True
-            taskMgr.add(i.knockback, "Player_" + str(i.id) + "Knockback")
+            if self.local:
+              self.local = False
+              self.isKnockback = True
+              taskMgr.add(self.knockback, "Player_" + str(self.id) + "Knockback")
 
-          # Drop Picked up Object
-          if self.actions.pickupObj:
-            self.actions.drop()            
+            if i.local:
+              i.local = False
+              i.isKnockback = True
+              taskMgr.add(i.knockback, "Player_" + str(i.id) + "Knockback")
+
+            # Drop Picked up Object
+            if self.actions.pickupObj:
+              self.actions.drop()            
                  
     # Update Position
     if not hasCollision:

@@ -49,7 +49,7 @@ class ChompinBomper(ShowBase):
     Init ze game!
     """
 
-    self.map = mapLoader.mapLoader(base.assetPath + "/maps/chomp_map1.PNG")
+    self.map = mapLoader.mapLoader(base.assetPath + "/maps/chomp_map2.png")
 
     base.playerid = 0
     base.players = []
