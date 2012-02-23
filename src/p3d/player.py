@@ -90,8 +90,8 @@ class player:
     # Stats
     self.accelerate = 15.0
     self.moveSpeed = 5.0
-    self.power = 15.0
-    self.resist = 10.0
+    self.power = 20.0
+    self.resist = 15.0
 
     # Keyboard Interface
     self.local = local
@@ -261,22 +261,18 @@ class player:
         if not i.actor.getZ() == pos[2]: continue
         if self.colWithNode(i.actor):
 
-          if i.movement == [0,0] and self.movement == [0,0]:
-            # Push players off of each other
-            ct = 0
-            while (self.colWithNode(i.actor) and ct < 200):
-              for x in range(len(self.direction)):
-                pos[x] += i.direction[x] * -0.01
-              self.actor.setFluidPos(pos)       
-              ct += 1            
-            pos[x] += self.moveVal[x] * 0.4
-            self.actor.setFluidPos(pos)             
-            
-          else:
+
+          # Ensure that the players are not overlapping.
+          while (self.colWithNode(i.actor)):
+            for x in range(len(self.direction)):
+              pos[x] += i.direction[x] * 0.25
+            self.actor.setFluidPos(pos)
+
+
+          if not(i.movement == [0,0] and self.movement == [0,0]):
 
             # Reverse Movement and swap momentum with other player.
-            for x in range(len(self.moveVal)):
-              pos[x] -= .4 * self.moveVal[x]
+
             
             for x in range(len(self.moveVal)):
               pmoveVal = self.moveVal[x]
@@ -289,12 +285,26 @@ class player:
 
               # Only move this player if he was stationary or the other player is moving 
               # in the opposite direction.              
-              if self.movement == [0,0] or i.direction == oppDir:             
-                self.moveVal[x] = i.moveVal[x] * 1
-                self.movement[x] = i.movement[x] * (((i.power - self.resist) / 3.0) + .1)
 
-              i.moveVal[x] = pmoveVal * 1
-              i.movement[x] = pmovement * (((self.power - i.resist) / 3.0) + .1)
+              myPower = self.getBumpPower(i.resist)
+              enemyPower = i.getBumpPower(self.resist)
+
+              # Enemy Data
+              eneMoveVal = i.moveVal[x]
+              eneMovement = i.movement[x]
+
+              # Player data
+              myMoveVal = self.moveVal[x]
+              myMovement = self.movement[x]
+
+              # Enemy player pushes player.
+              self.moveVal[x] = eneMoveVal
+              self.movement[x] = enemyPower[x]
+
+              # Player pushses enemy
+              i.moveVal[x] = myMoveVal
+              i.movement[x] = myPower[x]
+
               
               self.isMove[x] = False
               i.isMove[x] = False
@@ -562,4 +572,30 @@ class player:
       return task.done
 
     return task.cont
+
+  def getBumpPower(self, enemyResist):
+
+    """
+    Get player bump power based on enemy resist.
+    """
+
+    # Define
+    power = []
+
+    # Formula
+    for i in range(len(self.direction)):
+
+      #TODO: FORMULA!!!
+      thisPower = self.moveVal[i] * (((abs(self.movement[i]) / 1.5) + (abs(self.movement[i] / (self.moveSpeed * 1.5)) * self.power)) - enemyResist)
+
+      # Min
+      if abs(thisPower) < 5.0: thisPower = 5.0 * self.moveVal[i]
+
+      # Max
+      if abs(thisPower) > 20.0:  thisPower = 20.0 * self.moveVal[i]
+
+      power.append(thisPower)
+
+    return power
+
     

@@ -42,8 +42,9 @@ class actions:
     tilepos[0] += self.player.direction[0]
     tilepos[1] += self.player.direction[1]
 
+    if not self.player.movement == [0,0]:
+      return None
     self.player.isMove = [False, False]
-    self.player.movement = [0,0]
 
     for x in base.tilePositions:
       if not x['pickup']: continue
@@ -196,9 +197,10 @@ class actions:
         #taskMgr.add(self.pickupObjPlayer.fallLoop, "Player_" + str(self.pickupObjPlayer.id) + "_FallLoop")
         
         self.pickupObjPlayer.moveVal = self.thrownDir
-        power = self.player.power - self.pickupObjPlayer.resist
-        if power < 0.0: power = 0.0
-        self.pickupObjPlayer.movement = [self.thrownDir[0] * (power * 2.0), self.thrownDir[1] * (power * 2.0)]
+        power = ((self.player.power / self.pickupObjPlayer.resist) / .25) + 5.0
+        if power < 5.0: power = 5.0
+        if power > 15.0: power = 15.0
+        self.pickupObjPlayer.movement = [self.thrownDir[0] * (power * 1.25), self.thrownDir[1] * (power * 1.25)]
         self.pickupObjPlayer.noCollide = self.player
         self.player.noCollide = self.pickupObjPlayer   
         self.pickupObjPlayer.isMove = [False, False]
