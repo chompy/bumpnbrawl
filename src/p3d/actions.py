@@ -65,13 +65,21 @@ class actions:
       for x in base.players:
         if x == self.player: continue
         if x.getTilePos() == testPos:
-          taskMgr.remove("Player_" + str(x.id) + "_MoveLoop")  
+
+          # Remove enemy move loop
+          taskMgr.remove("Player_" + str(x.id) + "_MoveLoop")
+
+          # Initate break free loop...gives enemy player a chance to break free.
+          x.heldBy = self.player
+          x.breakFreeCt = int(math.floor(self.player.power * 1.15))
+          taskMgr.add(x.breakFree, "Player_" + str(x.id) + "_PickUpBreakFreeLoop")
 
           self.pickupObjIsPlayer = True
           self.pickupObjPlayer = x
           self.pickupObj = x.actor
           x.isHeld = True
           self.player.moveSpeed = self.player.moveSpeed / 2.0
+          break
 
     if not self.pickupObj: return None
 
@@ -117,7 +125,7 @@ class actions:
 
     return task.cont    
 
-  def drop(self):
+  def drop(self, dropPower = None):
 
     """
     Drop object that player is currently carrying.
@@ -148,10 +156,10 @@ class actions:
     # Remove Pick up task.
     taskMgr.remove("Player_" + str(self.player.id) + "_Action_Pickup")
 
-    # Move Lock
+    # Move Lock - Lock movement for ?? seconds after player is dropped
     if self.player.local:
       self.player.local = False
-      taskMgr.doMethodLater(.35, self.player.moveLock, "Player_" + str(self.player.id) + "MoveLock")
+      taskMgr.doMethodLater(.15, self.player.moveLock, "Player_" + str(self.player.id) + "MoveLock")
 
     # Throwing Animation
     self.player.animMove = "run"
@@ -163,12 +171,12 @@ class actions:
     # If player dropped then use animation
     if self.player.movement == [0,0]:
       self.player.setAnim('throw', False)
-      taskMgr.doMethodLater(.25, self.doDrop, "Player_" + str(self.player.id) + "_Action_DropDelay", appendTask=False, extraArgs=[])
+      taskMgr.doMethodLater(.25, self.doDrop, "Player_" + str(self.player.id) + "_Action_DropDelay", appendTask=False, extraArgs=[dropPower])
 
     # If bump causes drop then instantly drop.
-    else: self.doDrop()
+    else: self.doDrop(dropPower)
 
-  def doDrop(self):
+  def doDrop(self, dropPower):
 
     """
     Make actual dropping happen. (Delayed from drop method for animation).
@@ -197,7 +205,12 @@ class actions:
         #taskMgr.add(self.pickupObjPlayer.fallLoop, "Player_" + str(self.pickupObjPlayer.id) + "_FallLoop")
         
         self.pickupObjPlayer.moveVal = self.thrownDir
-        power = ((self.player.power / self.pickupObjPlayer.resist) / .25) + 5.0
+
+        # Get Power
+        if not dropPower:
+          power = ((self.player.power / self.pickupObjPlayer.resist) / .25) + 5.0
+        else: power = dropPower
+        
         if power < 5.0: power = 5.0
         if power > 15.0: power = 15.0
         self.pickupObjPlayer.movement = [self.thrownDir[0] * (power * 1.25), self.thrownDir[1] * (power * 1.25)]
@@ -205,9 +218,9 @@ class actions:
         self.player.noCollide = self.pickupObjPlayer   
         self.pickupObjPlayer.isMove = [False, False]
 
-        if self.pickupObjPlayer.local:
-          self.pickupObjPlayer.local = False
-          taskMgr.add(self.pickupObjPlayer.knockback, "Player_" + str(self.pickupObjPlayer.id) + "Knockback")  
+        #if self.pickupObjPlayer.local:
+        #  self.pickupObjPlayer.local = False
+        #  taskMgr.add(self.pickupObjPlayer.knockback, "Player_" + str(self.pickupObjPlayer.id) + "Knockback")  
 
         taskMgr.doMethodLater(.5, self.pickupObjPlayer.resetNoCollide, "Player_" + str(self.pickupObjPlayer.id) + "_RemoveNoCollide")
         taskMgr.doMethodLater(.5, self.player.resetNoCollide, "Player_" + str(self.player.id) + "_RemoveNoCollide")        
@@ -240,10 +253,11 @@ class actions:
       if i == self.player: continue
       if i.colWithBox(self.thrownObj.getPos(), (2.0, 2.0, 2.0)):
         i.moveVal = self.thrownDir
-        power = self.player.power - i.resist
+        power = (self.player.power * 1.25) - i.resist
         if power < 0.0: power = 0.0        
         i.movement = [self.thrownDir[0] * (power), self.thrownDir[1] * (power)]
         i.isMove = [False, False]
+        i.reduceResist()
 
         if i.local:
           i.local = False

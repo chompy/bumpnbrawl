@@ -304,7 +304,6 @@ class player:
               # Player pushses enemy
               i.moveVal[x] = myMoveVal
               i.movement[x] = myPower[x]
-
               
               self.isMove[x] = False
               i.isMove[x] = False
@@ -322,6 +321,11 @@ class player:
             # Drop Picked up Object
             if self.actions.pickupObj:
               self.actions.drop()
+
+            # Reduce player resist
+            if abs(self.movement[0]) > 1.0 or abs(self.movement[1]) > 1.0: self.reduceResist()
+            # Reduce enemy resist
+            if abs(i.movement[0]) > 1.0 or abs(i.movement[1]) > 1.0: i.reduceResist()
                
            
     # Update Position
@@ -585,7 +589,7 @@ class player:
     # Formula
     for i in range(len(self.direction)):
 
-      #TODO: FORMULA!!!
+      # FORMULA!!!
       thisPower = self.moveVal[i] * (((abs(self.movement[i]) / 1.5) + (abs(self.movement[i] / (self.moveSpeed * 1.5)) * self.power)) - enemyResist)
 
       # Min
@@ -598,4 +602,28 @@ class player:
 
     return power
 
-    
+  def reduceResist(self):
+
+    """
+    Reduce resistance after getting bumped.
+    """
+
+    self.resist -= .5
+    if self.resist < 1.0: self.resist = 1.0
+
+  def breakFree(self, task):
+
+    """
+    Give the player a chance to break free from being picked up.
+    """
+
+    moveKeys = ['up', 'right', 'down', 'left']
+
+    # To break free player must press the direction keys in a sequence...
+    if self.i.getButton(self.controls[ moveKeys[self.breakFreeCt % 4]]):
+      self.breakFreeCt -= 1
+      if self.breakFreeCt <= 0:
+        self.heldBy.actions.drop(5.0)
+        return task.done
+      
+    return task.cont
