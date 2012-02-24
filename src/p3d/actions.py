@@ -53,8 +53,9 @@ class actions:
         x['solid'] = 0
         self.pickupObj = x['node']
         self.pickupObjIsPlayer = False
-        self.player.moveSpeed = self.player.moveSpeed / 2.0
+        self.player.moveSpeed = self.origMoveSpeed / 2.0
         break
+
 
     for i in range(3):
       testPos = tilepos
@@ -97,13 +98,7 @@ class actions:
       taskMgr.doMethodLater(.15, lerpPickup.start, "Player_" + str(self.player.id) + "_Action_PickupLerp", appendTask=False, extraArgs=[])
 
       # Move Lock
-      if self.player.local:
-        self.player.local = False
-        pos = self.player.actor.getPos()
-        for i in range(len(self.player.direction)):
-          pos[i] -= self.player.direction[i] * .1
-        self.player.actor.setFluidPos(pos)
-        taskMgr.doMethodLater(.75, self.player.moveLock, "Player_" + str(self.player.id) + "MoveLock")
+      self.player.moveLock(None, .75)
 
       # Pick up animation here.
       self.player.animMove = "lift-run"
@@ -157,9 +152,7 @@ class actions:
     taskMgr.remove("Player_" + str(self.player.id) + "_Action_Pickup")
 
     # Move Lock - Lock movement for ?? seconds after player is dropped
-    if self.player.local:
-      self.player.local = False
-      taskMgr.doMethodLater(.15, self.player.moveLock, "Player_" + str(self.player.id) + "MoveLock")
+    self.player.moveLock(None, .15)
 
     # Throwing Animation
     self.player.animMove = "run"
@@ -310,40 +303,15 @@ class actions:
     self.disablePickup = False
     return task.done
 
-  def punch(self):
+  def useSpecial(self):
 
     """
-    Punches to the object in the block directly in front of the player.
-    """    
+    Use this player's special ability.
+    """
 
-    # Can't punch if holding something
-    if self.pickupObj: return None
+    function = getattr(self, self.player.character + "_special")
+    function()    
 
-    # Can only punch when stopped
-    if not self.player.isMove == [False, False]: return None
-
-    # Get the tile in front of the player.
-    tilePos = self.player.getTilePos()
-    for i in range(len(self.player.direction)):
-      tilePos[i] += self.player.direction[i]
-
-    # Loop through players to see if one is in front.
-    for i in base.players:
-      if i == self.player: continue
-
-      # Player in front...hit!
-      if i.getTilePos() == tilePos:
-
-        # TODO: Punching animation here.
-
-        # Knock player back.
-        i.moveVal = self.player.direction
-        i.movement = [self.player.direction[0] * ((self.player.power * 1.25) - i.resist), self.player.direction[1] * ((self.player.power * 1.25) - i.resist)]
-        i.isMove = [False, False]
-        if i.local:
-          i.local = False
-          taskMgr.add(i.knockback, "Player_" + str(i.id) + "Knockback")
-      
       
 
     

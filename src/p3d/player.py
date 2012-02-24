@@ -1,6 +1,6 @@
 from direct.actor.Actor import Actor
 from lib import basePolling
-import math,random, os, actions, ConfigParser
+import math,random, os, specials, ConfigParser
 
 GRAVITY = .5
 
@@ -15,6 +15,9 @@ class player:
     # Set ID
     base.playerid += 1
     self.id = base.playerid
+
+    # Character name
+    self.character = character.strip().lower()
 
     # Load Animations
     charDir = os.listdir(base.assetPath + "/characters/" + character)
@@ -82,6 +85,8 @@ class player:
     self.isPlaying = False
     self.animDefault = "idle"
     self.animMove = "run"
+    self.moveSpecial = False
+    self.specialCooldown = False
 
     # Set Start Position
     self.startPos = base.playerStart[self.id - 1]
@@ -98,11 +103,11 @@ class player:
     if local:
       self.controls = controls
 
-    # Setup Action module
-    self.actions = actions.actions(self)
+    # Setup Specials module which extudes the actions module.
+    self.actions = specials.specials(self)
     if local:
       base.accept(self.controls['btn1'], self.actions.pickup)
-      base.accept(self.controls['btn2'], self.actions.punch)
+      base.accept(self.controls['btn2'], self.actions.useSpecial)
     
     self.i = basePolling.Interface()
 
@@ -179,6 +184,11 @@ class player:
       else: 
         self.isMove[0] = False
 
+    if abs(self.movement[0]) >= self.moveSpeed + .5 or abs(self.movement[1]) >= self.moveSpeed + .5:
+      self.isMove = [False, False]
+    else:
+      self.moveSpecial = False
+
     for i in range(len(self.moveVal)):
 
       # Acceleration
@@ -251,6 +261,7 @@ class player:
           pos[i] -= self.moveVal[i] * 0.01
         self.actor.setFluidPos(pos)       
         ct += 1
+        self.movement = [0,0]
 
     # Check for collision with players
     if not self.isKnockback:
@@ -263,10 +274,12 @@ class player:
 
 
           # Ensure that the players are not overlapping.
-          while (self.colWithNode(i.actor)):
+          ct = 1000
+          while (self.colWithNode(i.actor) and ct <= 0):
             for x in range(len(self.direction)):
               pos[x] += i.direction[x] * 0.25
             self.actor.setFluidPos(pos)
+            ct -= 1
 
 
           if not(i.movement == [0,0] and self.movement == [0,0]):
@@ -298,15 +311,25 @@ class player:
               myMovement = self.movement[x]
 
               # Enemy player pushes player.
-              self.moveVal[x] = eneMoveVal
-              self.movement[x] = enemyPower[x]
+              if not self.moveSpecial:
+                self.moveVal[x] = eneMoveVal
+                self.movement[x] = enemyPower[x]
+                self.isMove[x] = False
+              else:
+                self.moveVal[x] = 0
+                self.movement[x] = 0
+                self.isMove[x] = False
 
               # Player pushses enemy
-              i.moveVal[x] = myMoveVal
-              i.movement[x] = myPower[x]
-              
-              self.isMove[x] = False
-              i.isMove[x] = False
+              if not i.moveSpecial:
+                i.moveVal[x] = myMoveVal
+                i.movement[x] = myPower[x]
+                i.isMove[x] = False
+              else:
+                i.moveVal[x] = 0
+                i.movement[x] = 0
+                i.isMove[x] = False                              
+                              
 
             if self.local:
               self.local = False
@@ -338,6 +361,10 @@ class player:
     # Falling
     if self.fallrate > 0.0:
       self.setAnim("fall", True)
+
+    # If moving because of a special ability.
+    elif (self.movement[0] or self.movement[1]) and self.moveSpecial:
+      self.setAnim("special", True)
     
     # If moved by player the animation
     elif self.isMove[0] or self.isMove[1]:
@@ -431,14 +458,21 @@ class player:
     self.isKnockback = True
     return task.cont
 
-  def moveLock(self, task):
+  def moveLock(self, task = None, time = None):
 
     """
-    Unlocks movement.
+    Unlocks movement after a set amount of time.
     """
 
-    self.local = True
-    return task.done
+    if not task and time:
+      if self.local:
+        self.local = False
+        taskMgr.doMethodLater(time, self.moveLock, "Player_" + str(self.id) + "_MoveLock", appendTask=True, extraArgs=[])
+      return None
+
+    elif task and not time:
+      self.local = True
+      return task.done
 
   def getTilePos(self, pos = None):
     
@@ -627,3 +661,34 @@ class player:
         return task.done
       
     return task.cont
+
+  def setMovement(self, movement, isSpecial = False, canControl = True):
+
+    """
+    Instantly set the players movement.
+    """
+
+    for i in range(len(self.direction)):
+      self.movement[i] = self.direction[i] * movement
+      if self.direction[i]: self.isMove[i] = True
+
+    self.moveVal = self.direction    
+    self.moveSpecial = isSpecial
+
+    if not canControl:
+      self.isKnockbacl = True
+      taskMgr.add(self.knockback, "Player_" + str(self.id) + "_Knockback")
+
+  def setSpecialCooldown(self, done = False):
+
+    """
+    Sets special to cooldown mode, special abilities cannot be used while in cooldown.
+    """
+
+    if not done:
+
+      self.specialCooldown = True
+      taskMgr.doMethodLater(7.5, self.setSpecialCooldown, "Player_" + str(self.id) + "_SpecialAbilityCooldown", appendTask=False, extraArgs=[True])
+
+    else:
+      self.specialCooldown = False
