@@ -4,7 +4,7 @@ from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 
 # Import game specific modules
-import mapLoader, player, camera
+import mapLoader, player, camera, hud
 
 # Config
 loadPrcFile("../../assets/Config.prc")
@@ -61,9 +61,14 @@ class ChompinBomper(ShowBase):
     base.players = []
     base.players.append(player.player("chompy", True, CONTROL1))
     base.players.append(player.player("chompy", True, CONTROL2))
+    base.players.append(player.player("chompy", False))
+    base.players.append(player.player("chompy", False))   
 
     self.camera = camera.camera(base.players[0])
     self.camera.add(base.players[1])
+
+    # Game Hud
+    self.hud = hud.gameHud()
 
     # Window Event
     self.accept(base.win.getWindowEvent(), self.windowEvent)
