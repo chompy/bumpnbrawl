@@ -249,10 +249,13 @@ class player:
     # Detect Collisions with tiles
     hasCollision = False
     for x in base.tilePositions:
-      tilePos = x['pos'] * 2.0
       if not x['solid']: continue
-      #if not tilePos[2] == pos[2]: continue
       if x['id'] == 1: continue
+      tilePos = x['pos'] * 2.0      
+      if tilePos[2] < pos[2]: continue
+      if tilePos[2] > pos[2] + 2.0: continue
+      if tilePos[0] > pos[0] + 2.0 or tilePos[0] < pos[0] - 2.0: continue
+      if tilePos[1] > pos[1] + 2.0 or tilePos[1] < pos[1] - 2.0: continue
 
       ct = 0
       while (self.colWithTile(tilePos) and ct < 200):
@@ -262,6 +265,8 @@ class player:
         self.actor.setFluidPos(pos)       
         ct += 1
         self.movement = [0,0]
+
+      break
 
     # Check for collision with players
     if not self.isKnockback:
@@ -403,6 +408,21 @@ class player:
       pos = self.actor.getPos()
       pos[2] -= 2.0
 
+      # Determine if there is a tile or not
+      falling = True
+      for x in base.tilePositions:
+        if not x['solid']: continue
+        tilePos = x['pos'] * 2.0
+        if tilePos[2] < pos[2]: continue
+        if tilePos[2] > pos[2] + 2.0: continue
+        if tilePos[0] > pos[0] + 2.0 or tilePos[0] < pos[0] - 2.0: continue
+        if tilePos[1] > pos[1] + 2.0 or tilePos[1] < pos[1] - 2.0: continue
+        
+        if self.colWithBox(tilePos, [2.0,2.0,2.0], pos):
+          falling = False
+          self.actor.setFluidZ(x['pos'][2])          
+          break
+          
       # Determine if there is a tile or not
       falling = True
       for x in base.tilePositions:

@@ -79,7 +79,7 @@ class ChompinBomper(ShowBase):
     self.debug.hide()
 
     # Activate Debugging
-    #taskMgr.add(self.showDebug, "Debugger")
+    # taskMgr.add(self.showDebug, "Debugger")
 
     run()
 
@@ -90,7 +90,7 @@ class ChompinBomper(ShowBase):
     debugStr = ""
     for i in base.players:
       dbLine = "PLAYER " + str(ct) + "\n POS: " + str(i.actor.getPos()) + " DIR: " + str(i.direction)
-      dbLine += " MOVEVAL: " + str(i.moveVal) + " MOVE: " + str(i.movement) + " KNOCK: " + str(i.isKnockback)
+      dbLine += " SPECIAL " + str(i.moveSpecial) + " MOVEVAL " + str(i.moveVal)
       debugStr += dbLine + "\n"
       ct += 1
     self.debug.setText(debugStr)
