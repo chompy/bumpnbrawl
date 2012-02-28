@@ -1,4 +1,5 @@
 from direct.actor.Actor import Actor
+from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens
 from lib import basePolling
 import math,random, os, specials, ConfigParser
 
@@ -87,6 +88,8 @@ class player:
     self.animMove = "run"
     self.moveSpecial = False
     self.specialCooldown = False
+    self.snapshot = None
+    self.isNoReduce = False
 
     # Set Start Position
     self.startPos = base.playerStart[self.id - 1]
@@ -662,8 +665,25 @@ class player:
     Reduce resistance after getting bumped.
     """
 
-    self.resist -= .5
-    if self.resist < 1.0: self.resist = 1.0
+    if not self.isNoReduce:
+      self.resist -= .5
+      if self.resist < 1.0: self.resist = 1.0
+      messenger.send("Player_" + str(self.id) + "_Resist_UpdateHud")
+      self.noReduce(.75)
+
+  def noReduce(self, time):
+
+    """
+    Makes it so player cannot lose resist for a set
+    ammount of time.
+    """
+
+    if time > 0:
+      self.isNoReduce = True
+      taskMgr.doMethodLater(time, self.noReduce, "Player_" + str(self.id) + "_NoReduceTimer", extraArgs=[0])
+    else:
+      self.isNoReduce = False
+    
 
   def breakFree(self, task):
 
@@ -712,3 +732,56 @@ class player:
 
     else:
       self.specialCooldown = False
+
+  def takeSnapshot(self):
+
+    """
+    Returns a snapshot of this player.
+    """
+
+    if self.snapshot: return self.snapshot
+
+    self.actor.pose("idle", 5)
+
+    # File Name
+    filename = str(self.id)
+
+    # Width and Height
+    width = 512
+    height = 512
+
+    # Make a buffer.
+    tex=Texture()
+    mybuffer = base.win.makeTextureBuffer('HDScreenShotBuff',width,height,tex,True)
+
+    # Make a new camera.
+    cam=Camera('SnapshotCam') 
+
+    lens = OrthographicLens()
+    lens.setFilmSize(1.1, 15)
+    
+    cam.setLens(lens) 
+    cam.getLens().setAspectRatio(width/height) 
+   
+    pCam=NodePath(cam) 
+      
+    mycamera = base.makeCamera(mybuffer,useCamera=pCam)
+    mycamera.setX(self.actor.getX() - 0.5)    
+    mycamera.setZ(self.actor.getZ() - 1.75)
+    mycamera.setY(self.actor.getY() - 9.0) 
+
+    mycamera.lookAt(self.actor)
+
+    # Set scene related stuff     
+    myscene = self.actor
+    mycamera.node().setScene(myscene) 
+
+    # Generate a image.
+    base.graphicsEngine.renderFrame()
+    tex = mybuffer.getTexture() 
+    mybuffer.setActive(False) 
+    self.snapshot = tex
+    base.graphicsEngine.removeWindow(mybuffer)
+    #self.snapshot.write("test" + str(self.id) + ".jpg")
+
+    return self.snapshot
