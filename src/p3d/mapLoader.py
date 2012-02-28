@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw
-from panda3d.core import NodePath
+from panda3d.core import NodePath, Texture
 import ConfigParser, os, math
 
 class mapLoader:
@@ -15,7 +15,7 @@ class mapLoader:
     self.tileData.read(base.assetPath + "/maps.conf")
 
     # Set Theme
-    self.theme = "default"
+    self.theme = "hq"
 
     # Create Node Path
     self.node = NodePath("Map")
@@ -145,6 +145,9 @@ class mapLoader:
         texPath = base.assetPath + "/tiles/themes/" + self.theme + "/" + str(bId) + ".png"
         if os.path.exists(texPath):
           tex = loader.loadTexture(texPath)
+#          tex.setMagfilter(Texture.FTNearest)
+          tex.setMinfilter(Texture.FTLinearMipmapLinear)
+          tex.setAnisotropicDegree(2)
           m.setTexture(tex)
 
         # Set Block Pos       
