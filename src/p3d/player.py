@@ -70,10 +70,8 @@ class player:
       self.dimensions[i] = (pos2[i] - pos1[i]) * scale
 
     # Setup ODE
-    self.ode_world = OdeWorld()
-    self.ode_world.setGravity(0, 0, 0)
 
-    self.ode_body = OdeBody(self.ode_world)
+    self.ode_body = OdeBody(base.ode_world)
 
     self.ode_body.setPosition( self.actor.getPos(render) )
     self.ode_body.setQuaternion( self.actor.getQuat(render) )
@@ -109,11 +107,11 @@ class player:
 
     # Set Start Position
     self.startPos = base.playerStart[self.id - 1]
-    self.ode_body.setPosition(self.startPos)
+    self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 10.0)
 
     # Stats
-    self.accelerate = 5000
-    self.moveSpeed = 5.0
+    self.accelerate = 12000
+    self.moveSpeed = 6.0
     self.power = 20.0
     self.resist = 15.0
 
@@ -203,10 +201,17 @@ class player:
             vel[i] = 0
 
       # ODE Tile Collision
-      
+      tilePos = self.getTilePos()
+      pos = self.ode_body.getPosition()
       for i in base.tilePositions:
         if not i['solid']: continue
-        if self.colWithTile(i['pos'] * 2.0):
+
+        # Below
+        if i['pos'][0] == tilePos[0] and i['pos'][1] == tilePos[1] and i['pos'][2] == tilePos[2] - 1:
+          vel[2] = .08
+          self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
+        
+        elif self.colWithTile(i['pos'] * 2.0):
           vel[0] = 0
           vel[1] = 0
           for x in range(len(self.moveVal)):
@@ -214,57 +219,96 @@ class player:
               force[x] = 20000
             else:
               force[x] = -20000
-          break
+        
+
+      if pos[2] < -10:
+        self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 10)
+
 
       # ODE Player Collision
 
       for i in base.players:
         if i == self: continue
-        if i.noCollide == self: continue
+        if i.noCollide == self or self.noCollide == i: continue
 
         if self.colWithNode(i.actor, i.dimensions):
 
+          # Get Bump Power
+          myPower = self.getBumpPower(i.resist)
+          enePower = i.getBumpPower(self.resist)
+          
+          eneForce = [0,0,0]
+          eneVel = [0,0,0]
+
+          # Repel the players so they don't get stuck on each other.
           oPos = i.actor.getPos()
           for x in range(len(self.moveVal)):
-            if self.moveVal[x]:
-              if oPos[x] - pos[x] < 0:
-                force[x] = 20000
-              else:
-                force[x] = -20000
-            
+            if oPos[x] - pos[x] < 0:
+              force[x] = 20000
+              eneForce[x] = -20000
 
-          # TODO: Bump power calculation
+              vel[x] = abs(enePower[x])
+              eneVel[x] = -abs(myPower[x])
 
-          oVel = i.ode_body.getLinearVel()
-          i.ode_body.setLinearVel(vel)
-          vel = (oVel[0], oVel[1], oVel[2])
+              if self.moveSpecial:
+                vel[x] = 0
+                force[x] = 50000
+              elif i.moveSpecial:
+                eneVel[x] = 0
+                eneForce[x] = -50000
+              
+            else:
+              force[x] = -20000
+              eneForce[x] = 20000
+
+              vel[x] = -abs(enePower[x])
+              eneVel[x] = abs(myPower[x])
+
+              if self.moveSpecial:
+                vel[x] = 0
+                force[x] = -50000
+              elif i.moveSpecial:
+                eneVel[x] = 0
+                eneForce[x] = 50000
+
+
+          i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
+          i.ode_body.setForce(eneForce[0], eneForce[1], eneForce[2])
+
+          self.reduceResist()
+          i.reduceResist()
+
+          self.setNoCollide(.25, i)
+          i.setNoCollide(.25, self)
 
       # ODE Step
 
       self.ode_body.setLinearVel(vel[0], vel[1], vel[2])
       self.ode_body.setForce(force[0], force[1], force[2])
-      
-      self.ode_world.quickStep(dt)
-      self.actor.setFluidPos(render, self.ode_body.getPosition())
 
+      self.actor.setFluidPos(render, self.ode_body.getPosition())
 
       # Set Rotation [Direction]
 
       if not self.isKnockback and not self.isMove == [False, False]:
         self.direction = [self.moveVal[0], self.moveVal[1]]
 
+      pos = self.actor.getPos()
       self.actor.lookAt( (pos[0] + self.direction[0], pos[1] + self.direction[1], pos[2]) )
       self.actor.setH(self.actor.getH() - 180)     
 
       # Animations
 
       # Falling
-      if self.fallrate > 0.0:
+      if vel[2] < -1.0:
         self.setAnim("fall", True)
 
       # If moving because of a special ability.
-      elif (self.movement[0] or self.movement[1]) and self.moveSpecial:
+      elif (vel[0] or vel[1]) and self.moveSpecial:
         self.setAnim("special", True)
+
+        self.actor.lookAt( (pos[0] + self.direction[0], pos[1] + self.direction[1], pos[2]) )
+        self.actor.setH(self.actor.getH() - 180)          
       
       # If moved by player the animation
       elif self.isMove[0] or self.isMove[1]:
@@ -282,80 +326,6 @@ class player:
       task.lastTime = task.time
     return task.cont
 
-  def fallLoop(self, task):
-
-    """
-    Causes player to fall when not on a tile.
-    """
-
-    # Get Deltatime
-    try:
-      task.lastTime
-    except:
-      task.lastTime = 0
-
-    dt = task.time - task.lastTime
-
-    if not self.isHeld:
-
-      # Player Pos
-      pos = self.actor.getPos()
-      pos[2] -= 2.0
-
-      # Determine if there is a tile or not
-      falling = True
-      for x in base.tilePositions:
-        if not x['solid']: continue
-        tilePos = x['pos'] * 2.0
-        if tilePos[2] < pos[2]: continue
-        if tilePos[2] > pos[2] + 2.0: continue
-        if tilePos[0] > pos[0] + 2.0 or tilePos[0] < pos[0] - 2.0: continue
-        if tilePos[1] > pos[1] + 2.0 or tilePos[1] < pos[1] - 2.0: continue
-        
-        if self.colWithBox(tilePos, [2.0,2.0,2.0], pos):
-          falling = False
-          self.actor.setFluidZ(x['pos'][2])          
-          break
-          
-      # Determine if there is a tile or not
-      falling = True
-      for x in base.tilePositions:
-        if not x['solid']: continue
-        tilePos = x['pos'] * 2.0
-        if self.colWithBox(tilePos, [2.0,2.0,2.0], pos):
-          falling = False
-          self.actor.setFluidZ(x['pos'][2])          
-          break
-
-      if falling and self.fallrate <= 0.0: self.fallrate = .001
-      elif not falling: self.fallrate = 0.0
-
-      if self.fallrate > 0.0:
-        self.fallrate = self.fallrate * 1.7
-        if self.fallrate > abs(GRAVITY): self.fallrate = abs(GRAVITY)
-        pos = self.actor.getPos()
-        if self.reverseGravity > 0.0:
-          pos[2] += self.fallrate
-          self.reverseGravity -= .075 * self.fallrate
-        else:
-          pos[2] -= self.fallrate
-        self.actor.setFluidPos(pos)
-    else:
-      falling = False
-
-    # Reset Position
-    if not falling and self.actor.getZ() < 0.0:
-      self.actor.setZ(0.0)
-      
-    if self.actor.getZ() < -10:
-      self.actor.setPos(self.startPos)
-      self.actor.setZ(10)
-
-    if self.i.getButton("f1"):
-      self.fallrate = 0.0
-      self.actor.setFluidZ(10)
-
-    return task.cont
 
   def knockback(self, task):
 
@@ -364,7 +334,9 @@ class player:
     once the players comes to a stop.
     """
 
-    if self.movement == [0,0]:
+    vel = self.ode_body.getLinearVel()
+
+    if vel[0] == 0 and vel[1] == 0:
       self.doMovementLock = False
       self.isKnockback = False
       self.moveSpecial = False
@@ -464,7 +436,7 @@ class player:
     """
 
     if time and noCollideObj:
-      self.noColide = noCollideObj
+      self.noCollide = noCollideObj
       taskMgr.doMethodLater(time, self.setNoCollide, "Player_" + str(self.id) + "_NoCollideTimer", extraArgs=[None,None])
 
     else:
@@ -539,11 +511,14 @@ class player:
     # Define
     power = []
 
+    vel = self.ode_body.getLinearVel()
     # Formula
     for i in range(len(self.direction)):
 
+      #if abs(vel[i]) > self.moveSpeed: vel[i] = self.moveSpeed
+
       # FORMULA!!!
-      thisPower = self.moveVal[i] * (((abs(self.movement[i]) / 1.5) + (abs(self.movement[i] / (self.moveSpeed * 1.5)) * self.power)) - enemyResist)
+      thisPower = self.moveVal[i] * (((abs(vel[i]) / 1.5) + (abs(vel[i] / (self.moveSpeed * 1.5)) * self.power)) - enemyResist)
 
       # Min
       if abs(thisPower) < 5.0: thisPower = 5.0 * self.moveVal[i]
@@ -604,14 +579,16 @@ class player:
     Instantly set the players movement.
     """
 
+    vel = self.ode_body.getLinearVel()
     for i in range(len(self.direction)):
-      self.movement[i] = self.direction[i] * movement
-      if self.direction[i]: self.isMove[i] = True
+      vel[i] = self.direction[i] * movement
 
-    self.moveVal = self.direction    
+    self.ode_body.setLinearVel(vel)
+
+    self.moveVal = self.direction
     self.moveSpecial = isSpecial
     self.isMove = [False, False]
-    self.direction = [self.moveVal[0], self.moveVal[1]]
+    #self.direction = [self.moveVal[0], self.moveVal[1]]
 
     if not canControl:
       self.isKnockback = True

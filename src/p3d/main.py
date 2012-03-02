@@ -1,5 +1,5 @@
 # Import Panda3D Modules
-from pandac.PandaModules import loadPrcFileData, VBase4, AntialiasAttrib, TextNode
+from pandac.PandaModules import loadPrcFileData, VBase4, AntialiasAttrib, TextNode, OdeWorld, OdeSimpleSpace, OdeJointGroup
 from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 
@@ -27,6 +27,14 @@ base.charExt = "egg"
 
 # Special Ability Cooldown Time
 base.sa_cooldown = 7.5
+
+# Setup ODE
+base.ode_world = OdeWorld()
+base.ode_world.setGravity(0, 0, -9.81)
+
+deltaTimeAccumulator = 0.0
+stepSize = 1.0 / 90.0
+
 
 # Make Background Color Black
 base.win.setClearColorActive(True)
@@ -81,6 +89,9 @@ class ChompinBomper(ShowBase):
     self.debug = OnscreenText(text = '<DEBUG>', fg=(1,1,1,1), pos = (-self.winAspect + .1, .8), scale = 0.05, align=TextNode.ALeft)
     self.debug.hide()
 
+    # ODE Loop
+    taskMgr.add(self.odeStep, "ODE_Step", sort=1)
+
     # Activate Debugging
     # taskMgr.add(self.showDebug, "Debugger")
 
@@ -108,6 +119,18 @@ class ChompinBomper(ShowBase):
     self.winWidth = base.win.getProperties().getXSize() 
     self.winHeight = base.win.getProperties().getYSize()
     self.winAspect = float(self.winWidth) / float(self.winHeight)
+
+  def odeStep(self, task):
+
+    global deltaTimeAccumulator 
+    deltaTimeAccumulator += globalClock.getDt()
+    while deltaTimeAccumulator > stepSize:
+      deltaTimeAccumulator -= stepSize
+  
+      base.ode_world.quickStep(stepSize)
+
+    return task.cont
+
     
 
 ChompinBomper()

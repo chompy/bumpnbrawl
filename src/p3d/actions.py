@@ -42,7 +42,7 @@ class actions:
     tilepos[0] += self.player.direction[0]
     tilepos[1] += self.player.direction[1]
 
-    if not self.player.movement == [0,0]:
+    if not self.player.moveVal == [0,0]:
       return None
     self.player.isMove = [False, False]
 
@@ -143,7 +143,7 @@ class actions:
     self.player.moveSpeed = self.origMoveSpeed
 
     # Set Throwing direction.
-    self.thrownDir = self.player.direction
+    self.thrownDir = [self.player.direction[0], self.player.direction[1]]
 
     # If player is not carrying anything reset pickupObj.
     if not self.pickupObj: return None
@@ -162,7 +162,7 @@ class actions:
     taskMgr.doMethodLater(1.5, self.restorePickup, "Player_" + str(self.player.id) + "_Action_DisablePickup") 
 
     # If player dropped then use animation
-    if self.player.movement == [0,0]:
+    if self.player.moveVal == [0,0]:
       self.player.setAnim('throw', False)
       taskMgr.doMethodLater(.25, self.doDrop, "Player_" + str(self.player.id) + "_Action_DropDelay", appendTask=False, extraArgs=[dropPower])
 
@@ -207,15 +207,14 @@ class actions:
         
         if power < 5.0: power = 5.0
         if power > 15.0: power = 15.0
-        self.pickupObjPlayer.movement = [self.thrownDir[0] * (power * 1.25), self.thrownDir[1] * (power * 1.25)]
-        self.pickupObjPlayer.noCollide = self.player
-        self.player.noCollide = self.pickupObjPlayer   
+
+        self.pickupObjPlayer.ode_body.setPosition(self.pickupObjPlayer.actor.getPos())
+        self.pickupObjPlayer.ode_body.setLinearVel(self.thrownDir[0] * (power * 1.25), self.thrownDir[1] * (power * 1.25), 3.5)
         self.pickupObjPlayer.isMove = [False, False]
 
-        taskMgr.doMethodLater(.5, self.pickupObjPlayer.resetNoCollide, "Player_" + str(self.pickupObjPlayer.id) + "_RemoveNoCollide")
-        taskMgr.doMethodLater(.5, self.player.resetNoCollide, "Player_" + str(self.player.id) + "_RemoveNoCollide")        
-
-        self.pickupObjPlayer.reverseGravity = .25
+        self.player.setNoCollide(.5, self.pickupObjPlayer)
+        self.pickupObjPlayer.setNoCollide(.5, self.player)
+      
         self.pickupObjPlayer.isHeld = False
 
         self.pickupObj = None
@@ -242,10 +241,10 @@ class actions:
     for i in base.players:
       if i == self.player: continue
       if i.colWithBox(self.thrownObj.getPos(), (2.0, 2.0, 2.0)):
-        i.moveVal = self.thrownDir
+        i.moveVal = [self.thrownDir[0], self.thrown[1]]
         power = (self.player.power * 1.25) - i.resist
         if power < 0.0: power = 0.0        
-        i.movement = [self.thrownDir[0] * (power), self.thrownDir[1] * (power)]
+        i.ode_body.setLinearVel(self.thrownDir[0] * (power), self.thrownDir[1] * (power), 0)
         i.isMove = [False, False]
         i.reduceResist()
 
