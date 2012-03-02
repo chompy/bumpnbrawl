@@ -47,6 +47,7 @@ class mapLoader:
     # Prepare Tile Array
     self.tiles = []
     base.tilePositions = []
+    base.tileCoords = {}
 
     # Go through each pixel collecting tile data.
     for y in range(size[1]):
@@ -167,6 +168,8 @@ class mapLoader:
           'pickup': pickup,
           'node'  : m
         })
+
+        base.tileCoords[str(int(tilePos[0])) + "_" + str(int(tilePos[1])) + "_" + str(int(tilePos[2]))] = base.tilePositions[len(base.tilePositions) - 1] 
 
         # Reparent Model
         if static: m.reparentTo(layerNode)

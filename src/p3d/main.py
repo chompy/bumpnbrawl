@@ -25,6 +25,9 @@ base.tileExt = "egg"
 # Ext to use when loading character.
 base.charExt = "egg"
 
+# Special Ability Cooldown Time
+base.sa_cooldown = 7.5
+
 # Make Background Color Black
 base.win.setClearColorActive(True)
 base.win.setClearColor(VBase4(0, 0, 0, 1))

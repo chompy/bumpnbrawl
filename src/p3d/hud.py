@@ -1,5 +1,5 @@
 from pandac.PandaModules import CardMaker, TextureStage, NodePath, TransparencyAttrib,TextNode
-from direct.interval.LerpInterval import LerpColorScaleInterval
+from direct.interval.LerpInterval import LerpColorScaleInterval, LerpScaleInterval
 from direct.showbase.Loader import Loader
 from direct.showbase.DirectObject import DirectObject
 from direct.gui.OnscreenText import OnscreenText
@@ -122,10 +122,20 @@ class gameHud(DirectObject):
     snap_frame.setColor(0.407843137254902,0.407843137254902,0.407843137254902,1)
     snap_frame_node = self.playerHuds[player.id]['node'].attachNewNode(snap_frame.generate())
     snap_frame_node.setTransparency(TransparencyAttrib.MAlpha) 
+    self.playerHuds[player.id]['snapshot'] = snap_frame_node
 
     ts = TextureStage('PlayerHud_Snapshot_TextureStage')
     ts.setMode(TextureStage.MDecal)
     snap_frame_node.setTexture(ts, snapshot)
+
+    # Special Ability Recharge Bar
+    sa_bar = CardMaker("PlayerHud_SpecialRecharge")
+    sa_bar.setFrame(.17,0,-.075, -.06)
+    sa_bar.setColor(1,1,0,1)
+    sa_bar_node = self.playerHuds[player.id]['node'].attachNewNode(sa_bar.generate())
+    sa_bar_node.setX(-.145)
+    sa_bar_node.hide()
+    self.playerHuds[player.id]['sa_bar'] = sa_bar_node
 
     # Get Width/Height
     pos1, pos2 = self.playerHuds[player.id]['node'].getTightBounds()
@@ -144,6 +154,9 @@ class gameHud(DirectObject):
     # When player's power up changes update hud.
     self.accept("Player_" + str(player.id) + "_PowerUp_UpdateHud", self.updatePlayerPowerup, [player])
     self.updatePlayerPowerup(player)    
+
+    # When player uses a special, activate cooldown bar.
+    self.accept("Player_" + str(player.id) + "_Hud_SpecialAbilityCooldown", self.updatePlayerCooldown, [player])
 
     # Fader Lerp
     fadeLerp = LerpColorScaleInterval(self.playerHuds[player.id]['node'], .4, (1,1,1,1), (0,0,0,.1))
@@ -194,3 +207,34 @@ class gameHud(DirectObject):
     myHud = self.playerHuds[player.id]
     # TODO
       
+  def updatePlayerCooldown(self, player):
+
+    """
+    Sets up player cooldown bar to display time
+    remaining.
+    """
+
+    myHud = self.playerHuds[player.id]
+    myHud['sa_bar'].setScale(0,1,1)
+    myHud['sa_bar'].show()
+    myHud['snapshot'].setColorScale(1,1,1,.6)
+    
+    # Scale Lerp
+    scaleLerp = LerpScaleInterval(myHud['sa_bar'], base.sa_cooldown, (1,1,1), (0,1,1))
+    scaleLerp.start()
+
+    taskMgr.doMethodLater(base.sa_cooldown, self.playerCooldownReset, "Player_" + str(player.id) + "_Hud_CooldownReset", extraArgs=[player])
+
+  def playerCooldownReset(self, player):
+
+    """
+    Occurs once the player's cooldown has been
+    recharged.
+    """
+
+    myHud = self.playerHuds[player.id]
+    myHud['sa_bar'].hide()
+    myHud['snapshot'].setColorScale(1,1,1,1)    
+
+    
+    

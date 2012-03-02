@@ -159,7 +159,7 @@ class actions:
     self.player.animDefault = "idle"
 
     self.disablePickup = True
-    taskMgr.doMethodLater(1.0, self.restorePickup, "Player_" + str(self.player.id) + "_Action_DisablePickup") 
+    taskMgr.doMethodLater(1.5, self.restorePickup, "Player_" + str(self.player.id) + "_Action_DisablePickup") 
 
     # If player dropped then use animation
     if self.player.movement == [0,0]:
@@ -197,7 +197,8 @@ class actions:
         taskMgr.add(self.pickupObjPlayer.moveLoop, "Player_" + str(self.pickupObjPlayer.id) + "_MoveLoop")
         #taskMgr.add(self.pickupObjPlayer.fallLoop, "Player_" + str(self.pickupObjPlayer.id) + "_FallLoop")
         
-        self.pickupObjPlayer.moveVal = self.thrownDir
+        self.pickupObjPlayer.moveVal = [self.thrownDir[0], self.thrownDir[1]]
+        self.pickupObjPlayer.direction = [self.thrownDir[0], self.thrownDir[1]]
 
         # Get Power
         if not dropPower:
@@ -210,10 +211,6 @@ class actions:
         self.pickupObjPlayer.noCollide = self.player
         self.player.noCollide = self.pickupObjPlayer   
         self.pickupObjPlayer.isMove = [False, False]
-
-        #if self.pickupObjPlayer.local:
-        #  self.pickupObjPlayer.local = False
-        #  taskMgr.add(self.pickupObjPlayer.knockback, "Player_" + str(self.pickupObjPlayer.id) + "Knockback")  
 
         taskMgr.doMethodLater(.5, self.pickupObjPlayer.resetNoCollide, "Player_" + str(self.pickupObjPlayer.id) + "_RemoveNoCollide")
         taskMgr.doMethodLater(.5, self.player.resetNoCollide, "Player_" + str(self.player.id) + "_RemoveNoCollide")        
@@ -252,10 +249,8 @@ class actions:
         i.isMove = [False, False]
         i.reduceResist()
 
-        if i.local:
-          i.local = False
-          i.isKnockback = True
-          taskMgr.add(i.knockback, "Player_" + str(i.id) + "Knockback")
+        i.isKnockback = True
+        taskMgr.add(i.knockback, "Player_" + str(i.id) + "Knockback")
 
         pos = self.thrownObj.getPos()
         self.throwInt.finish()

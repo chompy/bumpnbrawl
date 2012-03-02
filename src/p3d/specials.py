@@ -26,7 +26,7 @@ class specials(actions.actions):
     else:
       self.player.isKnockback = False
       if self.player.movement == [0,0]:
-        self.player.setMovement(self.player.power * 1.25, True, True)
+        self.player.setMovement(self.player.power * 1.25, True, False)
         self.player.setSpecialCooldown()
     
       return task.done
