@@ -1,5 +1,5 @@
 # Import Panda3D Modules
-from pandac.PandaModules import loadPrcFileData, VBase4, AntialiasAttrib, TextNode, OdeWorld, OdeSimpleSpace, OdeJointGroup
+from pandac.PandaModules import loadPrcFileData, VBase4, AntialiasAttrib, TextNode, OdeWorld, OdeSimpleSpace, OdeJointGroup, PointLight, Spotlight, PerspectiveLens, Vec4, AmbientLight
 from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 
@@ -34,7 +34,6 @@ base.ode_world.setGravity(0, 0, -9.81)
 
 deltaTimeAccumulator = 0.0
 stepSize = 1.0 / 90.0
-
 
 # Make Background Color Black
 base.win.setClearColorActive(True)
@@ -95,6 +94,23 @@ class ChompinBomper(ShowBase):
     # Activate Debugging
     # taskMgr.add(self.showDebug, "Debugger")
 
+    slight = Spotlight('slight')
+    slight.setColor(VBase4(1, 1, 1, 1))
+    lens = PerspectiveLens()
+    slight.setLens(lens)
+    slight.setShadowCaster(True, 512, 512)
+    slnp = render.attachNewNode(slight)
+    slnp.setPos(self.map.mapSize[0] / 2.0, -self.map.mapSize[1] / 1.15, 15)
+    #slnp.lookAt(base.players[0].actor)
+    slnp.setP(-15)
+    render.setLight(slnp)
+
+    alight = AmbientLight('alight')
+    alight.setColor(VBase4(1, 1, 1, 1))
+    alnp = render.attachNewNode(alight)
+    render.setLight(alnp)
+
+    render.setShaderAuto()
     run()
 
   def showDebug(self, task = None):    

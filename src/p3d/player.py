@@ -103,6 +103,7 @@ class player:
     self.specialCooldown = False
     self.snapshot = None
     self.isNoReduce = False
+    self.local = local
     self.doMovementLock = False
 
     # Set Start Position
@@ -277,6 +278,12 @@ class player:
 
           self.reduceResist()
           i.reduceResist()
+
+          for x in range(len(myPower)):
+            if abs(enePower[x]) >= 5.05:
+              self.actions.drop(.5)
+            if abs(myPower[x]) >= 5.05:
+              i.actions.drop(.5)
 
           self.setNoCollide(.25, i)
           i.setNoCollide(.25, self)
@@ -562,13 +569,14 @@ class player:
     Give the player a chance to break free from being picked up.
     """
 
+
     moveKeys = ['up', 'right', 'down', 'left']
 
     # To break free player must press the direction keys in a sequence...
     if self.i.getButton(self.controls[ moveKeys[self.breakFreeCt % 4]]):
       self.breakFreeCt -= 1
       if self.breakFreeCt <= 0:
-        self.heldBy.actions.drop(5.0)
+        self.heldBy.actions.drop(1.0)
         return task.done
       
     return task.cont

@@ -49,6 +49,8 @@ class mapLoader:
     base.tilePositions = []
     base.tileCoords = {}
 
+    self.mapSize = (float(size[0]) * 2.0, float(size[1]) * 2.0)
+
     # Go through each pixel collecting tile data.
     for y in range(size[1]):
       self.tiles.append([])

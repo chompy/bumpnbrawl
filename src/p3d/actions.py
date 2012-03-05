@@ -72,7 +72,7 @@ class actions:
 
           # Initate break free loop...gives enemy player a chance to break free.
           x.heldBy = self.player
-          x.breakFreeCt = int(math.floor(self.player.power * 1.15))
+          x.breakFreeCt = int(math.floor(self.player.power * .75))
           taskMgr.add(x.breakFree, "Player_" + str(x.id) + "_PickUpBreakFreeLoop")
 
           self.pickupObjIsPlayer = True
@@ -175,6 +175,8 @@ class actions:
     Make actual dropping happen. (Delayed from drop method for animation).
     """
 
+    if not self.pickupObj: return None
+
     # Use Projectile Intveral on non player objects
     if not self.pickupObjIsPlayer and self.pickupObj:
       self.throwInt = ProjectileInterval(self.pickupObj,
@@ -202,7 +204,7 @@ class actions:
 
         # Get Power
         if not dropPower:
-          power = ((self.player.power / self.pickupObjPlayer.resist) / .25) + 5.0
+          power = ((self.player.power / self.pickupObjPlayer.resist) / .75) + 5.0
         else: power = dropPower
         
         if power < 5.0: power = 5.0
@@ -241,8 +243,8 @@ class actions:
     for i in base.players:
       if i == self.player: continue
       if i.colWithBox(self.thrownObj.getPos(), (2.0, 2.0, 2.0)):
-        i.moveVal = [self.thrownDir[0], self.thrown[1]]
-        power = (self.player.power * 1.25) - i.resist
+        i.moveVal = [self.thrownDir[0], self.thrownDir[1]]
+        power = (self.player.power * 1.05) - i.resist
         if power < 0.0: power = 0.0        
         i.ode_body.setLinearVel(self.thrownDir[0] * (power), self.thrownDir[1] * (power), 0)
         i.isMove = [False, False]
