@@ -19,6 +19,7 @@ class mapLoader:
 
     # Create Node Path
     self.node = NodePath("Map")
+    self.node.setZ(-.2)
     self.node.reparentTo(render)
 
     self.staticMesh = NodePath("StaticMap")

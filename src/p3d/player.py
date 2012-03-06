@@ -73,7 +73,7 @@ class player:
 
     self.ode_body = OdeBody(base.ode_world)
 
-    self.ode_body.setPosition( self.actor.getPos(render) )
+    self.ode_body.setPosition( self.actor.getPos() )
     self.ode_body.setQuaternion( self.actor.getQuat(render) )
     self.ode_body.addForce( (0, 200, 0) )
 
@@ -112,7 +112,7 @@ class player:
 
     # Stats
     self.accelerate = 12000
-    self.moveSpeed = 6.0
+    self.moveSpeed = 5.0
     self.power = 20.0
     self.resist = 15.0
 
@@ -139,8 +139,7 @@ class player:
     self.i = basePolling.Interface()
 
     taskMgr.add(self.moveLoop, "Player_" + str(self.id) + "_MoveLoop")   
-    #taskMgr.add(self.fallLoop, "Player_" + str(self.id) + "_FallLoop")
-
+    
     # Begin Animation
     self.setAnim(self.animDefault, True)
 
@@ -276,8 +275,11 @@ class player:
           i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
           i.ode_body.setForce(eneForce[0], eneForce[1], eneForce[2])
 
-          self.reduceResist()
-          i.reduceResist()
+          if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
+            i.reduceResist()
+
+          if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
+            self.reduceResist()
 
           for x in range(len(myPower)):
             if abs(enePower[x]) >= 5.05:
@@ -316,15 +318,23 @@ class player:
 
         self.actor.lookAt( (pos[0] + self.direction[0], pos[1] + self.direction[1], pos[2]) )
         self.actor.setH(self.actor.getH() - 180)          
+
+      # If knocked back by another force...
+      elif self.isKnockback and not self.moveVal == self.direction:
+        self.setAnim("bump", True)
       
       # If moved by player the animation
       elif self.isMove[0] or self.isMove[1]:
+      
+        # Animation speed...
+        #speed = vel[0]
+        #if abs(vel[1]) > abs(vel[0]): speed = vel[1]
+        #speed = abs(speed / self.moveSpeed)
+        #if speed < .5: speed = .5
+        #self.actor.setPlayRate( speed, self.animMove)
+        
         self.setAnim(self.animMove, True)
             
-      # If knocked back by another force...
-      elif (self.moveVal[0] or self.moveVal[1]) and not self.moveVal == self.direction:
-        self.setAnim("bump", True)
-
       # Otherwise play default animation.
       else:
         self.setAnim(self.animDefault, True)
@@ -537,14 +547,14 @@ class player:
 
     return power
 
-  def reduceResist(self):
+  def reduceResist(self, ammt = .5):
 
     """
     Reduce resistance after getting bumped.
     """
 
     if not self.isNoReduce:
-      self.resist -= .5
+      self.resist -= ammt
       if self.resist < 1.0: self.resist = 1.0
       messenger.send("Player_" + str(self.id) + "_Resist_UpdateHud")
       self.noReduce(.75)
