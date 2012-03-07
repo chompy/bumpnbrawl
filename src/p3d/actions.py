@@ -260,6 +260,9 @@ class actions:
           taskMgr.remove("Player_" + str(self.player.id) + "_Action_FadePickup")
           self.removePickup(self.thrownObj)
         self.thrownObj = None
+
+        i.particlePlay('stars', .5)
+        
         return task.done
 
     # Check if Object collide with Solid Tile

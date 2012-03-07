@@ -21,12 +21,13 @@ class specials(actions.actions):
       if abs(self.player.movement[0]) < 4.5 and abs(self.player.movement[1]) < 4.5:
         self.player.moveLock(None, .5)
         self.player.setAnim("special", 0)
+        self.player.particlePlay("powerup", .5)
         taskMgr.doMethodLater(.5, self.chompy_special, "Player_" + str(self.player.id) + "_Action_Special")
       return None
     else:
       self.player.isKnockback = False
       if self.player.movement == [0,0]:
-        self.player.setMovement(self.player.power * .45, True, False)
+        self.player.setMovement(self.player.power * .75, True, False)
         self.player.setSpecialCooldown()
     
       return task.done

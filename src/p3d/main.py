@@ -39,6 +39,11 @@ stepSize = 1.0 / 90.0
 base.win.setClearColorActive(True)
 base.win.setClearColor(VBase4(0, 0, 0, 1))
 
+# Enable Particle System
+base.enableParticles()
+
+# Controls
+
 CONTROL1 = {
   'left'    :   'arrow_left',
   'right'   :   'arrow_right',
@@ -94,23 +99,23 @@ class ChompinBomper(ShowBase):
     # Activate Debugging
     # taskMgr.add(self.showDebug, "Debugger")
 
-    slight = Spotlight('slight')
-    slight.setColor(VBase4(1, 1, 1, 1))
-    lens = PerspectiveLens()
-    slight.setLens(lens)
-    slight.setShadowCaster(True, 512, 512)
-    slnp = render.attachNewNode(slight)
-    slnp.setPos(self.map.mapSize[0] / 2.0, -self.map.mapSize[1] / 1.15, 15)
-    #slnp.lookAt(base.players[0].actor)
-    slnp.setP(-15)
-    render.setLight(slnp)
+    #slight = Spotlight('slight')
+    #slight.setColor(VBase4(1, 1, 1, 1))
+    #lens = PerspectiveLens()
+    #slight.setLens(lens)
+    #slight.setShadowCaster(True, 512, 512)
+    #slnp = render.attachNewNode(slight)
+    #slnp.setPos(self.map.mapSize[0] / 2.0, -self.map.mapSize[1] / 1.15, 15)
+    
+    #slnp.setP(-15)
+    #render.setLight(slnp)
 
-    alight = AmbientLight('alight')
-    alight.setColor(VBase4(1, 1, 1, 1))
-    alnp = render.attachNewNode(alight)
-    render.setLight(alnp)
+    #alight = AmbientLight('alight')
+    #alight.setColor(VBase4(1, 1, 1, 1))
+    #alnp = render.attachNewNode(alight)
+    #render.setLight(alnp)
 
-    render.setShaderAuto()
+    #render.setShaderAuto()
     run()
 
   def showDebug(self, task = None):    

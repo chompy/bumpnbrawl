@@ -1,5 +1,7 @@
 from direct.actor.Actor import Actor
-from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens
+from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib
+from direct.particles.ParticleEffect import ParticleEffect
+from direct.interval.LerpInterval import LerpColorScaleInterval
 from lib import basePolling
 import math,random, os, specials, ConfigParser
 from pandac.PandaModules import OdeWorld, OdeBody, OdeMass, Quat
@@ -49,6 +51,7 @@ class player:
     # Load Model
     self.actor = Actor(base.assetPath + "/characters/" + character + "/model." + base.charExt, animations)
     self.actor.reparentTo(render)
+    self.actor.setTransparency(TransparencyAttrib.MAlpha)
 
     # Set Scale
     scale = 1.0
@@ -111,7 +114,7 @@ class player:
     self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 10.0)
 
     # Stats
-    self.accelerate = 12000
+    self.accelerate = 18000
     self.moveSpeed = 5.0
     self.power = 20.0
     self.resist = 15.0
@@ -221,8 +224,21 @@ class player:
               force[x] = -20000
         
 
+      # Fall off the side
       if pos[2] < -10:
-        self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 10)
+        if not self.isDead:
+          lerpMe = LerpColorScaleInterval(self.actor, .5, (1,1,1,0))
+          lerpMe.start()
+
+          taskMgr.doMethodLater(.6, self.ode_body.setPosition, "Player_" + str(self.id) + "_FallResetPosition", extraArgs=[self.startPos[0], self.startPos[1], self.startPos[2] + 4], sort=1)
+          taskMgr.doMethodLater(.6, self.actor.setColorScale, "Player_" + str(self.id) + "_FallReappear", extraArgs=[(1,1,1,1)], sort=2)
+          taskMgr.doMethodLater(.65, self.particlePlay, "Player_" + str(self.id) + "_FallPoof", extraArgs=['diesplosion', 1.5], sort=3)
+
+        self.isDead = True
+        vel[2] = 0
+        force[2] = 0
+      else:
+        self.isDead = False
 
 
       # ODE Player Collision
@@ -244,8 +260,8 @@ class player:
           oPos = i.actor.getPos()
           for x in range(len(self.moveVal)):
             if oPos[x] - pos[x] < 0:
-              force[x] = 20000
-              eneForce[x] = -20000
+              force[x] = 40000
+              eneForce[x] = -40000
 
               vel[x] = abs(enePower[x])
               eneVel[x] = -abs(myPower[x])
@@ -253,13 +269,15 @@ class player:
               if self.moveSpecial:
                 vel[x] = 0
                 force[x] = 50000
+                self.moveSpecial = False
               elif i.moveSpecial:
                 eneVel[x] = 0
                 eneForce[x] = -50000
+                i.moveSpecial = False
               
             else:
-              force[x] = -20000
-              eneForce[x] = 20000
+              force[x] = -40000
+              eneForce[x] = 40000
 
               vel[x] = -abs(enePower[x])
               eneVel[x] = abs(myPower[x])
@@ -267,19 +285,31 @@ class player:
               if self.moveSpecial:
                 vel[x] = 0
                 force[x] = -50000
+                self.moveSpecial = False
               elif i.moveSpecial:
                 eneVel[x] = 0
                 eneForce[x] = 50000
+                i.moveSpecial = False
 
+          if not i.moveSpecial:
+            
 
-          i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
-          i.ode_body.setForce(eneForce[0], eneForce[1], eneForce[2])
+            i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
+            i.ode_body.setForce(eneForce[0], eneForce[1], eneForce[2])
 
-          if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
-            i.reduceResist()
+            if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
+              i.reduceResist()
 
-          if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
-            self.reduceResist()
+          if not self.moveSpecial:
+
+            velTest = i.ode_body.getLinearVel()
+          
+            if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
+              self.reduceResist()
+
+              # Play stars particle effect
+              self.particlePlay('stars', .5)
+
 
           for x in range(len(myPower)):
             if abs(enePower[x]) >= 5.05:
@@ -309,7 +339,7 @@ class player:
       # Animations
 
       # Falling
-      if vel[2] < -1.0:
+      if vel[2] <= -.75 and pos[2] < -.5:
         self.setAnim("fall", True)
 
       # If moving because of a special ability.
@@ -486,7 +516,7 @@ class player:
       return True
 
     # For loops... if animation is already set then no need to restart it.
-    if self.animation == name: return None
+    #if self.animation == name: return None
     
     self.loopAnimation = name
 
@@ -494,7 +524,7 @@ class player:
 
     if not self.isPlaying:
       self.animation = name
-      self.actor.loop(self.animation, restart = 0, fromFrame = self.animConfig[name]['loopfrom'], toFrame = self.animConfig[name]['loopto'])
+      self.actor.loop(self.animation, restart = 0, fromFrame = self.animConfig[name]['loopfrom'], toFrame = self.animConfig[name]['loopto'] - 2)
       return True
       
     return False
@@ -679,3 +709,14 @@ class player:
     #self.snapshot.write("test" + str(self.id) + ".jpg")
 
     return self.snapshot
+
+  def particlePlay(self, name, time):
+
+    """
+    Play a particle effect for a period of time.
+    """
+    p = ParticleEffect()
+    p.loadConfig(base.assetPath + "/particles/" + name + ".ptf")
+    p.start(self.actor, render)
+    taskMgr.doMethodLater(time, p.softStop, "Player_" + str(self.id) + "_StarsParticleStop", extraArgs=[])
+    taskMgr.doMethodLater(time * 2.5, p.cleanup, "Player_" + str(self.id) + "_StarsParticleCleanup", extraArgs=[])    
