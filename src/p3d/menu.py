@@ -5,7 +5,7 @@ from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.fsm.FSM import FSM
-from direct.interval.LerpInterval import LerpScaleInterval, LerpColorScaleInterval
+from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScaleInterval
 from direct.interval.MetaInterval import Sequence
 
 from lib import menuBars
@@ -39,6 +39,8 @@ class mainMenu(FSM):
     # Menu node
     self.node = NodePath("MenuNode")
     self.node.reparentTo(render)
+
+    self.windowObj = []
 
     # Prepare menu BG
     menu_frame = CardMaker("Menu_Background")
@@ -74,7 +76,15 @@ class mainMenu(FSM):
     # Logo
     self.logo = OnscreenImage(image = base.assetPath + "/menu/logo.png", pos = (-0.0, 0, 0.0), parent=self.titleNode)
     self.logo.setTransparency(TransparencyAttrib.MAlpha)
-  
+
+    # Menu Bar
+    self.menuBar = menuBars.menuBars([])
+    self.menuBar.node.setZ(.7)
+    self.addWindowNode(self.menuBar.node, -1, .3)
+
+    # Bind Window Event
+    self.windowEvent()  
+    self.accept("window-event", self.windowEvent)
 
   def enterTitle(self):
 
@@ -84,6 +94,7 @@ class mainMenu(FSM):
 
     self.titleNode.show()
     self.accept("f1", self.request, ['Main'])
+    self.accept("mouse1", self.request, ['Main'])
 
   def exitTitle(self):
 
@@ -91,16 +102,22 @@ class mainMenu(FSM):
     Exit title screen menu.
     """
 
-    logoLerp = Sequence(
-      LerpScaleInterval(self.logo, 1.75, 5, 1),
-      LerpColorScaleInterval(self.logo, .5, (1,1,1,0), (1,1,1,1))
-    )
+    logoLerp = LerpPosHprScaleInterval(
+      self.logo, 
+      .75,
+      (self.winAspect - .7,0,.3), 
+      (0,0,0), 
+      .8)
+
     logoLerp.start()
 
-    taskMgr.doMethodLater(2.25, self.titleNode.hide, "MenuHideTitle", extraArgs=[])
+    self.addWindowNode(self.logo, 1, -.7)
+
+    #taskMgr.doMethodLater(2.25, self.titleNode.hide, "MenuHideTitle", extraArgs=[])
 
 
     self.ignore("f1")
+    self.ignore("mouse1")
 
   def enterMain(self):
 
@@ -111,12 +128,14 @@ class mainMenu(FSM):
     self.mainNode = NodePath("MenuMain")
     self.mainNode.reparentTo(aspect2d)
 
-    OPTIONS = {
-      'Online'  :   'Online',
-      'Local'   :   'Local',
-      'Options' :   'Options',
-      'Quit'    :   'Quit'
-    }
+    OPTIONS = [
+      ['Online','Online'],
+      ['Local', 'Local'],
+      ['Options', 'Options'],
+      ['Quit', 'Quit']
+    ]
+
+    self.menuBar.setOptions(OPTIONS)
 
   def exitMain(self):
 
@@ -126,6 +145,25 @@ class mainMenu(FSM):
 
     self.mainNode.hide()
 
+  def addWindowNode(self, node, side, xoffset):
+
+    """
+    Add NodePath to list of nodes that will be
+    repositioned everytime the window is resized.
+    """
+     
+    self.windowObj.append([node, side, xoffset])
+
+  def rmWindowNode(self, node):
+
+    """
+    Remove NodePath from above list.
+    """
+
+    for i in self.windowObj:
+      if i[0] == node:
+        self.windowObj.remove(i)
+        break
 
   def windowEvent(self, window = None):
 
@@ -135,7 +173,11 @@ class mainMenu(FSM):
 
     self.winWidth = base.win.getProperties().getXSize() 
     self.winHeight = base.win.getProperties().getYSize()
-    self.winAspect = float(self.winWidth) / float(self.winHeight)    
+    self.winAspect = float(self.winWidth) / float(self.winHeight)  
+
+    # Update Node
+    for i in self.windowObj:
+      i[0].setX((self.winAspect * i[1]) + i[2])
 
 m = mainMenu()
 m.request("Title")
