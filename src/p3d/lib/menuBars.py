@@ -28,9 +28,16 @@ class menuBars(DirectObject):
 
   def setOptions(self, options):
 
-    if len(self.buttons) > 0:
-      for i in self.buttons:
-        i.destroy()
+    addTime = 0.0
+    if len(self.buttons) >= 0:
+      for i in range(len(self.buttons)):
+        self.buttons[i].unbind(DGG.WITHIN)
+        self.buttons[i].unbind(DGG.WITHOUT) 
+        self.buttonMouseOut(self.buttons[i])
+        lerp = LerpPosInterval(self.buttons[i], .5, (self.buttons[i].getX(), self.buttons[i].getY(), -2.5)) 
+        taskMgr.doMethodLater(float((len(self.buttons) - i) + .01) * .25, lerp.start, "MenuBar_Buttons_OldScrollOut_" + str(i), extraArgs=[])
+        taskMgr.doMethodLater(float(len(self.buttons) * 1.0), self.buttons[i].destroy, "MenuBar_Buttons_OldCleanup_" + str(i), extraArgs=[])
+      addTime = float(len(self.buttons) * .3)
       del self.buttons
       self.buttons = []
 
@@ -42,21 +49,22 @@ class menuBars(DirectObject):
                text_fg=(1, 1, 1, 1), frameColor=(1,1,1,1), 
                text_wordwrap=10, 
                scale=.1, pos=(0,0,i * -.18), 
-               #command=, 
+               command=options[i][1],
+               extraArgs=options[i][2],
                parent=self.node,
                text_font=self.barFont,
                frameTexture=self.barTex,
                frameSize=(-4, 4, -.8, .8),
                relief=DGG.FLAT,
-               text_pos=(.5,-.3),
+               text_pos=(.75,-.3),
                rolloverSound=None,
                clickSound=None               
                ) 
       DB.setTransparency(TransparencyAttrib.MAlpha)
       DB.setX(-.1)            
 
-      DB.bind(DGG.WITHIN, self.buttonMouseOn, [DB])
-      DB.bind(DGG.WITHOUT, self.buttonMouseOut, [DB])
+      taskMgr.doMethodLater(addTime + len(options) * .4, DB.bind, "MenuBar_Buttons_" + str(i) + "_BindMouseTask", extraArgs=[DGG.WITHIN, self.buttonMouseOn, [DB]])
+      taskMgr.doMethodLater(addTime + len(options) * .4, DB.bind, "MenuBar_Buttons_" + str(i) + "_BindMouseTask", extraArgs=[DGG.WITHOUT, self.buttonMouseOut, [DB]])      
 
       self.buttons.append(DB)
 
@@ -64,12 +72,12 @@ class menuBars(DirectObject):
       lerp = LerpPosInterval(DB, .5, DB.getPos()) 
       DB.setPos((DB.getX(), DB.getY(), DB.getZ() + 1.0))
 
-      taskMgr.doMethodLater(float( (len(options) - i) + .01) * .25, lerp.start, "MenuBars_Button_" + str(i) + "_LerpStackIn", extraArgs=[])
+      taskMgr.doMethodLater(addTime + float( (len(options) - i) + .01) * .25, lerp.start, "MenuBars_Button_" + str(i) + "_LerpStackIn", extraArgs=[])
       
-  def buttonMouseOn(self, button, mouse):
-    lerp = LerpPosInterval(button, .25, (-0,button.getY(),button.getZ()), (-.1,button.getY(),button.getZ()))
+  def buttonMouseOn(self, button, mouse = None):
+    lerp = LerpPosInterval(button, .25, (-0,button.getY(),button.getZ()))
     lerp.start()
 
-  def buttonMouseOut(self, button, mouse):
-    lerp = LerpPosInterval(button, .25, (-.1,button.getY(),button.getZ()), (0,button.getY(),button.getZ()))
+  def buttonMouseOut(self, button, mouse = None):
+    lerp = LerpPosInterval(button, .25, (-.1,button.getY(),button.getZ()))
     lerp.start()

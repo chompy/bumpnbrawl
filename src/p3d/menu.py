@@ -1,4 +1,5 @@
 # Import Panda3D Modules
+import sys
 from pandac.PandaModules import loadPrcFileData, TextNode, NodePath, CardMaker,TextureStage, Texture, VBase3, TransparencyAttrib
 from direct.interval.LerpInterval import LerpHprInterval
 from panda3d.core import loadPrcFile
@@ -129,10 +130,10 @@ class mainMenu(FSM):
     self.mainNode.reparentTo(aspect2d)
 
     OPTIONS = [
-      ['Online','Online'],
-      ['Local', 'Local'],
-      ['Options', 'Options'],
-      ['Quit', 'Quit']
+      ['Online', self.request, ['Online']],
+      ['Local', self.request, ['Local']],
+      ['Options', self.request, ['Options']],
+      ['Quit', sys.exit, []]
     ]
 
     self.menuBar.setOptions(OPTIONS)
@@ -144,6 +145,14 @@ class mainMenu(FSM):
     """
 
     self.mainNode.hide()
+
+  def enterOptions(self):
+
+    OPTIONS = [
+      ['Back', self.request, ['Main']]
+    ]
+
+    self.menuBar.setOptions(OPTIONS)
 
   def addWindowNode(self, node, side, xoffset):
 
