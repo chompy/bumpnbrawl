@@ -9,7 +9,7 @@ from direct.fsm.FSM import FSM
 from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScaleInterval
 from direct.interval.MetaInterval import Sequence
 
-from lib import menuBars
+from lib import menuBars, menuOptions
 
 # Config
 loadPrcFile("../../assets/Config.prc")
@@ -83,9 +83,14 @@ class mainMenu(FSM):
     self.menuBar.node.setZ(.7)
     self.addWindowNode(self.menuBar.node, -1, .3)
 
+    # Menu Options
+    self.menuOptions = menuOptions.menuOptions([])
+    self.menuOptions.node.setZ(.7)
+    self.addWindowNode(self.menuOptions.node, -1, .8)
+
     # Bind Window Event
     self.windowEvent()  
-    self.accept("window-event", self.windowEvent)
+    self.accept("window-event", self.windowEvent)    
 
   def enterTitle(self):
 
@@ -154,6 +159,28 @@ class mainMenu(FSM):
 
     self.menuBar.setOptions(OPTIONS)
 
+    MO_OPTIONS = [
+
+      ['Resolution',  [
+        ['1920x1080', None, [1920,1080]],
+        ['800x600', None, [800, 600]],
+        ['640x480', None, [640, 480]]
+      ]],
+
+      ['Window Mode', [
+        ['Windowed', None, [0]],
+        ['Fullscreen', None, [1]]
+        
+      ]]
+
+    ]
+
+    self.menuOptions.setOptions(MO_OPTIONS)
+
+  def exitOptions(self):
+
+    self.menuOptions.setOptions([])
+    
   def addWindowNode(self, node, side, xoffset):
 
     """
