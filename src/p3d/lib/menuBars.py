@@ -30,6 +30,10 @@ class menuBars(DirectObject):
 
   def setOptions(self, options):
 
+    """
+    Sets up a menu bar with options.
+    """
+
     addTime = 0.0
     if len(self.buttons) >= 0:
       for i in range(len(self.buttons)):
@@ -77,14 +81,17 @@ class menuBars(DirectObject):
       taskMgr.doMethodLater(addTime + float( (len(options) - i) + .01) * .25, lerp.start, "MenuBars_Button_" + str(i) + "_LerpStackIn", extraArgs=[])
 
     # Set Player 1 input
-    base.accept("p1_up", self.keyboardSelect, [-1])
-    base.accept("p1_down", self.keyboardSelect, [1])
-  
+    self.deactivateKeyboard()
 
     self.selected = 0
     self.keyboardSelect(0)
       
   def buttonMouseOn(self, button, mouse = None):
+
+    """
+    Actviates when the mouse hovers a button.
+    """
+  
     for i in range(len(self.buttons)):
       if self.buttons[i] == button: 
         self.selected = i
@@ -95,11 +102,44 @@ class menuBars(DirectObject):
     lerp.start()
 
   def buttonMouseOut(self, button, mouse = None):
+
+    """
+    Activates when the mouse stop hovering a button.
+    """
+  
     lerp = LerpPosInterval(button, .25, (-.1,button.getY(),button.getZ()))
     lerp.start()
 
+  def activateKeyboard(self):
+
+    """
+    Activates keyboard input, allowing player 1 to make bar
+    menu go up and down with arrow keys.
+    """
+  
+    base.accept("p1_up", self.keyboardSelect, [-1])
+    base.accept("p1_down", self.keyboardSelect, [1]) 
+
+    self.keyboardSelect(0)   
+
+  def deactivateKeyboard(self):
+
+    """
+    Deactivate keyboard.
+    """
+
+    base.accept("p1_up", self.activateKeyboard)
+    base.accept("p1_down", self.activateKeyboard)
+    base.ignore("p1_btna")
+
+
   def keyboardSelect(self, direction):
 
+    """
+    Selects the active button with the keyboard.
+    Binds the button function to p1-btna.
+    """
+  
     for i in self.buttons:
       self.buttonMouseOut(i)
 

@@ -96,6 +96,19 @@ class mainMenu(FSM):
     self.windowEvent()  
     self.accept("window-event", self.windowEvent)    
 
+    # Get Window resolutions available
+    di = base.pipe.getDisplayInformation()
+    self.resolutions = []
+
+    for index in range(di.getTotalDisplayModes()):
+      addSize = True
+      for i in self.resolutions:
+        if i == [di.getDisplayModeWidth(index), di.getDisplayModeHeight(index)]:
+          addSize = False
+          break
+      if addSize:
+        self.resolutions.append( [di.getDisplayModeWidth(index), di.getDisplayModeHeight(index)] )
+
   def enterTitle(self):
 
     """
@@ -103,7 +116,7 @@ class mainMenu(FSM):
     """
 
     self.titleNode.show()
-    self.accept("f1", self.request, ['Main'])
+    self.accept("p1_btna", self.request, ['Main'])
     self.accept("mouse1", self.request, ['Main'])
 
   def exitTitle(self):
@@ -126,7 +139,7 @@ class mainMenu(FSM):
     #taskMgr.doMethodLater(2.25, self.titleNode.hide, "MenuHideTitle", extraArgs=[])
 
 
-    self.ignore("f1")
+    self.ignore("p1_btna")
     self.ignore("mouse1")
 
   def enterMain(self):
@@ -165,17 +178,15 @@ class mainMenu(FSM):
 
     MO_OPTIONS = [
 
-      ['Resolution',  [
-        ['1920x1080', self.setRes, [1920,1080]],
-        ['800x600', self.setRes, [800, 600]],
-        ['640x480', self.setRes, [640, 480]]
-      ]],
+      ['Resolution',  [],
+        len(self.resolutions) - 1
+      ],
 
       ['Window Mode', [
         ['Windowed', None, [0]],
         ['Fullscreen', None, [1]]
         
-      ]],
+      ], 0],
 
       ['Config Controls', [
         ['go...', None, [0]],        
@@ -183,7 +194,14 @@ class mainMenu(FSM):
 
     ]
 
+    # Add resolutions
+    for i in self.resolutions:
+      MO_OPTIONS[0][1].append([str(i[0]) + "x" + str(i[1]), self.setRes, [i[0], i[1]]])
+
     self.menuOptions.setOptions(MO_OPTIONS)
+
+    # Add player input back button
+    self.accept("p1_btnb", self.request, ['Main'])
 
   def exitOptions(self):
 

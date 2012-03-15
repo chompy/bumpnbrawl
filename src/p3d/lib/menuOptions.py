@@ -102,8 +102,14 @@ class menuOptions(DirectObject):
       for x in range(len(options[i][1])):
         self.scrollOptions[i].append(options[i][1][x])
 
+      # Get Default
+      try:
+        default = options[i][2]
+      except IndexError:
+        default = 0
+
       if len(options[i][1]) > 1:
-        optionSelector.setText(self.scrollOptions[i][0][0])
+        optionSelector.setText(self.scrollOptions[i][default][0])
       else:
         optionSelector['text'] = self.scrollOptions[i][0][0]
 
@@ -158,11 +164,9 @@ class menuOptions(DirectObject):
         btnRight
       ])
 
-
     # Player 1 Input
-    self.selected = 0
-    base.accept("p1_up", self.activateKeyboard)
-    base.accept("p1_down", self.activateKeyboard)    
+    self.selected = default
+    self.deactivateKeyboard()
 
   def scrollOption(self, direction, textNode, optionList):
 
@@ -207,10 +211,39 @@ class menuOptions(DirectObject):
     taskMgr.doMethodLater(.25, seq2.start, "MenuOptions_ScrollOptionAnimation", extraArgs=[])
 
   def activateKeyboard(self):
+
+    """
+    Activate keyboard selection.
+    """
+  
     base.accept("p1_up", self.keyboardSelect, [-1])
     base.accept("p1_down", self.keyboardSelect, [1]) 
 
     self.keyboardSelect(0)
+
+  def deactivateKeyboard(self):
+
+    """
+    Deactivate keyboard, ungray options.
+    """
+
+    base.accept("p1_up", self.activateKeyboard)
+    base.accept("p1_down", self.activateKeyboard)
+    base.ignore("p1_btna")
+
+    for i in range(len(self.optionNodes)):
+      node = self.optionNodes[i]
+      color = (1,1,1,1)
+      if node[3] and node[4]:
+        node[3]['image'] = self.arrowEnabled
+        node[4]['image'] = self.arrowEnabled       
+
+      try:
+        node[2].setFg(color)
+      except:
+        node[2]['text_fg'] = color
+
+    self.accept("mouse1", self.deactivateKeyboard)
 
   def keyboardSelect(self, direction):
 
