@@ -10,6 +10,7 @@ from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScale
 from direct.interval.MetaInterval import Sequence
 
 from lib import menuBars, menuOptions
+import gameInput
 
 # Config
 loadPrcFile("../../assets/Config.prc")
@@ -36,6 +37,9 @@ class mainMenu(FSM):
 
     # Disable Mouse
     base.disableMouse()
+
+    # Game Input
+    self.input = gameInput.gameInput()
 
     # Menu node
     self.node = NodePath("MenuNode")
@@ -162,16 +166,20 @@ class mainMenu(FSM):
     MO_OPTIONS = [
 
       ['Resolution',  [
-        ['1920x1080', None, [1920,1080]],
-        ['800x600', None, [800, 600]],
-        ['640x480', None, [640, 480]]
+        ['1920x1080', self.setRes, [1920,1080]],
+        ['800x600', self.setRes, [800, 600]],
+        ['640x480', self.setRes, [640, 480]]
       ]],
 
       ['Window Mode', [
         ['Windowed', None, [0]],
         ['Fullscreen', None, [1]]
         
-      ]]
+      ]],
+
+      ['Config Controls', [
+        ['go...', None, [0]],        
+      ]]      
 
     ]
 
@@ -180,6 +188,9 @@ class mainMenu(FSM):
   def exitOptions(self):
 
     self.menuOptions.setOptions([])
+
+  def setRes(self, x, y):
+    print "RESOLUTION SET: " + str(x) + "x" + str(y)
     
   def addWindowNode(self, node, side, xoffset):
 

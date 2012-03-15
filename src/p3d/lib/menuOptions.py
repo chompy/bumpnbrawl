@@ -23,6 +23,7 @@ class menuOptions(DirectObject):
     # Vars
     self.optionNodes = []
     self.scrollOptions = {}
+    self.selected = 0
 
   def setOptions(self, options):
 
@@ -35,8 +36,10 @@ class menuOptions(DirectObject):
               
         taskMgr.doMethodLater(1, self.optionNodes[i][1].destroy, "MenuOptions_DestroyOptionNode_" + str(i) + "_1", extraArgs=[])
         taskMgr.doMethodLater(1, self.optionNodes[i][2].destroy, "MenuOptions_DestroyOptionNode_" + str(i) + "_2", extraArgs=[])
-        taskMgr.doMethodLater(1, self.optionNodes[i][3].destroy, "MenuOptions_DestroyOptionNode_" + str(i) + "_3", extraArgs=[])
-        taskMgr.doMethodLater(1, self.optionNodes[i][4].destroy, "MenuOptions_DestroyOptionNode_" + str(i) + "_4", extraArgs=[])
+        if self.optionNodes[i][3]:
+          taskMgr.doMethodLater(1, self.optionNodes[i][3].destroy, "MenuOptions_DestroyOptionNode_" + str(i) + "_3", extraArgs=[])
+        if self.optionNodes[i][4]:
+          taskMgr.doMethodLater(1, self.optionNodes[i][4].destroy, "MenuOptions_DestroyOptionNode_" + str(i) + "_4", extraArgs=[])
         taskMgr.doMethodLater(1, self.optionNodes[i][0].removeNode, "MenuOptions_DestroyOptionNode_" + str(i) + "_0", extraArgs=[])
         
 
@@ -64,16 +67,33 @@ class menuOptions(DirectObject):
         )
 
       # Option Scroll List
-      optionSelector = OnscreenText(
-        text = 'menu option', 
-        fg=(1,1,1,1), 
-        shadow=(0,0,0,.6),
-        align=TextNode.ACenter, 
-        font=self.boldFont, 
-        pos = (.37, -.107), 
-        scale = 0.05, 
-        parent=optionNode,
-        mayChange=True
+      if len(options[i][1]) > 1:      
+        optionSelector = OnscreenText(
+          text = 'menu option', 
+          fg=(1,1,1,1), 
+          shadow=(0,0,0,.6),
+          align=TextNode.ACenter, 
+          font=self.boldFont, 
+          pos = (.37, -.107), 
+          scale = 0.05, 
+          parent=optionNode,
+          mayChange=True
+          )
+      else:
+        optionSelector = DirectButton(
+          text = 'menu option',
+          rolloverSound=None,
+          clickSound=None,
+          frameColor=(0,0,0,0),
+          text_fg = (1,1,1,1),
+          text_shadow = (0,0,0,.6),
+          text_align=TextNode.ACenter, 
+          text_font=self.boldFont,           
+          pos = (.37,0, -.107), 
+          scale = 0.05,
+          parent=optionNode,
+          command=options[i][1][0][1],
+          extraArgs=options[i][1][0][2],      
         )
       optionSelector.setTransparency(TransparencyAttrib.MAlpha)
 
@@ -82,42 +102,48 @@ class menuOptions(DirectObject):
       for x in range(len(options[i][1])):
         self.scrollOptions[i].append(options[i][1][x])
 
-      optionSelector.setText(self.scrollOptions[i][0][0])
+      if len(options[i][1]) > 1:
+        optionSelector.setText(self.scrollOptions[i][0][0])
+      else:
+        optionSelector['text'] = self.scrollOptions[i][0][0]
 
       # Change Option Left Button
-      btnLeft = DirectButton( 
-               text="", 
-               text_fg=(1, 1, 1, 1), frameColor=(1,1,1,0), 
-               scale=.05, pos=(.09,0,-.09), 
-               hpr=(180,0,0),
-               command=self.scrollOption,
-               extraArgs=[-1, optionSelector, self.scrollOptions[i]],
-               parent=optionNode,
-               #frameTexture=self.arrowTex,
-               #frameSize=(-4, 4, -.8, .8),
-               image=self.arrowEnabled,
-               relief=DGG.FLAT,
-               rolloverSound=None,
-               clickSound=None               
-               ) 
-      btnLeft.setTransparency(TransparencyAttrib.MAlpha)        
+      btnLeft = None
+      btnRight = None
+      if len(options[i][1]) > 1:
+        btnLeft = DirectButton( 
+                 text="", 
+                 text_fg=(1, 1, 1, 1), frameColor=(1,1,1,0), 
+                 scale=.05, pos=(.09,0,-.09), 
+                 hpr=(180,0,0),
+                 command=self.scrollOption,
+                 extraArgs=[-1, optionSelector, self.scrollOptions[i]],
+                 parent=optionNode,
+                 #frameTexture=self.arrowTex,
+                 #frameSize=(-4, 4, -.8, .8),
+                 image=self.arrowEnabled,
+                 relief=DGG.FLAT,
+                 rolloverSound=None,
+                 clickSound=None               
+                 ) 
+        btnLeft.setTransparency(TransparencyAttrib.MAlpha)        
 
-      # Change Option Right Button
-      btnRight = DirectButton( 
-               text="", 
-               text_fg=(1, 1, 1, 1), frameColor=(1,1,1,0), 
-               scale=.05, pos=(.65,0,-.09), 
-               command=self.scrollOption,
-               extraArgs=[1, optionSelector, self.scrollOptions[i]],
-               parent=optionNode,
-               #frameTexture=self.arrowTex,
-               #frameSize=(-4, 4, -.8, .8),
-               image=self.arrowEnabled,
-               relief=DGG.FLAT,
-               rolloverSound=None,
-               clickSound=None               
-               ) 
-      btnRight.setTransparency(TransparencyAttrib.MAlpha)            
+        # Change Option Right Button
+        btnRight = DirectButton( 
+                 text="", 
+                 text_fg=(1, 1, 1, 1), frameColor=(1,1,1,0), 
+                 scale=.05, pos=(.65,0,-.09), 
+                 command=self.scrollOption,
+                 extraArgs=[1, optionSelector, self.scrollOptions[i]],
+                 parent=optionNode,
+                 #frameTexture=self.arrowTex,
+                 #frameSize=(-4, 4, -.8, .8),
+                 image=self.arrowEnabled,
+                 relief=DGG.FLAT,
+                 rolloverSound=None,
+                 clickSound=None               
+                 ) 
+        btnRight.setTransparency(TransparencyAttrib.MAlpha)            
 
       # Fade In
       lerp2 = LerpColorScaleInterval(optionNode, .7, (1,1,1,1), (1,1,1,0))
@@ -133,6 +159,11 @@ class menuOptions(DirectObject):
       ])
 
 
+    # Player 1 Input
+    self.selected = 0
+    base.accept("p1_up", self.activateKeyboard)
+    base.accept("p1_down", self.activateKeyboard)    
+
   def scrollOption(self, direction, textNode, optionList):
 
     """
@@ -143,6 +174,7 @@ class menuOptions(DirectObject):
     for i in range(len(optionList)):
       if optionList[i][0] == textNode.getText():
         currentOption = i
+
         break
 
     # Increase/Decrease Option
@@ -151,6 +183,11 @@ class menuOptions(DirectObject):
     # Make sure it's within the boundries of the optionList array.
     if currentOption < 0: currentOption = len(optionList) - 1
     elif currentOption > len(optionList) - 1: currentOption = 0
+
+    # Execute Command [If specified]
+    if optionList[currentOption][1]:
+      optionList[currentOption][1](*optionList[currentOption][2])
+    
 
     # Set Text
 
@@ -169,3 +206,58 @@ class menuOptions(DirectObject):
     taskMgr.doMethodLater(.25, textNode.setText, "MenuOptions_ScrollOptionTextChange", extraArgs=[optionList[currentOption][0]])
     taskMgr.doMethodLater(.25, seq2.start, "MenuOptions_ScrollOptionAnimation", extraArgs=[])
 
+  def activateKeyboard(self):
+    base.accept("p1_up", self.keyboardSelect, [-1])
+    base.accept("p1_down", self.keyboardSelect, [1]) 
+
+    self.keyboardSelect(0)
+
+  def keyboardSelect(self, direction):
+
+    """
+    Sets the active option for keyboard selection.
+    """
+
+    self.selected += direction
+
+    if self.selected > len(self.optionNodes) - 1:
+      self.selected = 0
+    elif self.selected < 0:
+      self.selected = len(self.optionNodes) - 1
+      
+    for i in range(len(self.optionNodes)):
+      node = self.optionNodes[i]
+
+      if i == self.selected:
+        color = (1,1,1,1)
+        if node[3] and node[4]:
+          node[3]['image'] = self.arrowEnabled
+          node[4]['image'] = self.arrowEnabled        
+      else:
+        color = (0.3294117647058824,0.3294117647058824,0.3294117647058824,1)
+        if node[3] and node[4]:        
+          node[3]['image'] = self.arrowDisabled
+          node[4]['image'] = self.arrowDisabled
+
+      try:
+        node[2].setFg(color)
+      except:
+        node[2]['text_fg'] = color
+
+    # Set keyboard scroll
+    base.ignore("p1_btna")
+    base.ignore("p1_left")    
+    base.ignore("p1_right")    
+    if len(self.scrollOptions[self.selected]) > 1:
+      base.accept("p1_right", self.scrollOption, [1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
+      base.accept("p1_left", self.scrollOption, [-1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
+
+    # Set button press
+    else:
+      if self.scrollOptions[self.selected][0][1]:
+        base.accept("p1_btna", self.scrollOptions[self.selected][0][1], self.scrollOptions[self.selected][0][2])
+    
+        
+
+      
+      

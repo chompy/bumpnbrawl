@@ -25,6 +25,8 @@ class menuBars(DirectObject):
     # Button List
     self.buttons = []
 
+    # Vars
+    self.selected = 0
 
   def setOptions(self, options):
 
@@ -73,11 +75,37 @@ class menuBars(DirectObject):
       DB.setPos((DB.getX(), DB.getY(), DB.getZ() + 1.0))
 
       taskMgr.doMethodLater(addTime + float( (len(options) - i) + .01) * .25, lerp.start, "MenuBars_Button_" + str(i) + "_LerpStackIn", extraArgs=[])
+
+    # Set Player 1 input
+    base.accept("p1_up", self.keyboardSelect, [-1])
+    base.accept("p1_down", self.keyboardSelect, [1])
+  
+
+    self.selected = 0
+    self.keyboardSelect(0)
       
   def buttonMouseOn(self, button, mouse = None):
+    for i in range(len(self.buttons)):
+      if self.buttons[i] == button: 
+        self.selected = i
+      else:
+        self.buttonMouseOut(self.buttons[i])
+          
     lerp = LerpPosInterval(button, .25, (-0,button.getY(),button.getZ()))
     lerp.start()
 
   def buttonMouseOut(self, button, mouse = None):
     lerp = LerpPosInterval(button, .25, (-.1,button.getY(),button.getZ()))
     lerp.start()
+
+  def keyboardSelect(self, direction):
+
+    for i in self.buttons:
+      self.buttonMouseOut(i)
+
+    self.selected += direction
+    if self.selected > len(self.buttons) - 1: self.selected = 0
+    elif self.selected < 0: self.selected = len(self.buttons) - 1
+
+    base.accept("p1_btna", self.buttons[self.selected]['command'], self.buttons[self.selected]['extraArgs'])
+    self.buttonMouseOn(self.buttons[self.selected])

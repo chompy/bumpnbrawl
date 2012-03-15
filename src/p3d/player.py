@@ -10,7 +10,7 @@ GRAVITY = .5
 
 class player:
 
-  def __init__(self, character = "cuby", local=True, controls = False):
+  def __init__(self, character = "cuby", local=True, controls = 0):
  
     """
     Init a player character.
@@ -121,23 +121,23 @@ class player:
 
     # Keyboard Interface
     if local:
-      self.controls = controls
+      self.controls = str(controls)
 
     # Setup Specials module which extudes the actions module.
     self.actions = specials.specials(self)
     if local:
-      base.accept(self.controls['up'], self.setMoveVal, [[0,1]])
-      base.accept(self.controls['down'], self.setMoveVal, [[0,-1]])
-      base.accept(self.controls['left'], self.setMoveVal, [[-1,0]])
-      base.accept(self.controls['right'], self.setMoveVal, [[1,0]])
+      base.accept("p" + self.controls + "_up", self.setMoveVal, [[0,1]])
+      base.accept("p" + self.controls + "_down", self.setMoveVal, [[0,-1]])
+      base.accept("p" + self.controls + "_left", self.setMoveVal, [[-1,0]])
+      base.accept("p" + self.controls + "_right", self.setMoveVal, [[1,0]])
 
-      base.accept(self.controls['up'] + "-up", self.setMoveVal, [[0,.1]])
-      base.accept(self.controls['down'] + "-up", self.setMoveVal, [[0,.1]])
-      base.accept(self.controls['left'] + "-up", self.setMoveVal, [[.1,0]])
-      base.accept(self.controls['right'] + "-up", self.setMoveVal, [[.1,0]])
+      base.accept("p" + self.controls + "_up-up", self.setMoveVal, [[0,.1]])
+      base.accept("p" + self.controls + "_down-up", self.setMoveVal, [[0,.1]])
+      base.accept("p" + self.controls + "_left-up", self.setMoveVal, [[.1,0]])
+      base.accept("p" + self.controls + "_right-up", self.setMoveVal, [[.1,0]])
       
-      base.accept(self.controls['btn1'], self.actions.pickup)
-      base.accept(self.controls['btn2'], self.actions.useSpecial)
+      base.accept("p" + self.controls + "_btna", self.actions.pickup)
+      base.accept("p" + self.controls + "_btnb", self.actions.useSpecial)
     
     self.i = basePolling.Interface()
 
@@ -610,10 +610,10 @@ class player:
     """
 
 
-    moveKeys = ['up', 'right', 'down', 'left']
+    moveKeys = [[0,1], [1,0], [0,-1], [-1,0]]
 
     # To break free player must press the direction keys in a sequence...
-    if self.i.getButton(self.controls[ moveKeys[self.breakFreeCt % 4]]):
+    if self.kbVal == moveKeys[self.breakFreeCt % 4]:
       self.breakFreeCt -= 1
       if self.breakFreeCt <= 0:
         self.heldBy.actions.drop(1.0)
