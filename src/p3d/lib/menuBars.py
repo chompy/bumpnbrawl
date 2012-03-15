@@ -28,7 +28,7 @@ class menuBars(DirectObject):
     # Vars
     self.selected = 0
 
-  def setOptions(self, options):
+  def setOptions(self, options, bindKeys = True):
 
     """
     Sets up a menu bar with options.
@@ -81,7 +81,8 @@ class menuBars(DirectObject):
       taskMgr.doMethodLater(addTime + float( (len(options) - i) + .01) * .25, lerp.start, "MenuBars_Button_" + str(i) + "_LerpStackIn", extraArgs=[])
 
     # Set Player 1 input
-    self.deactivateKeyboard()
+    if bindKeys:
+      taskMgr.doMethodLater(addTime + len(options) * .4, self.deactivateKeyboard, "MenuBarsBindKeys", extraArgs=[])
 
     self.selected = 0
     self.keyboardSelect(0)

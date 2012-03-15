@@ -19,6 +19,7 @@ class menuOptions(DirectObject):
     # Load Select Arrow Texture
     self.arrowEnabled = loader.loadTexture(base.assetPath + "/menu/select_arrow_enabled.png")
     self.arrowDisabled = loader.loadTexture(base.assetPath + "/menu/select_arrow_disabled.png")    
+    self.arrowKbdSelect = loader.loadTexture(base.assetPath + "/menu/keyboard_select.png")        
 
     # Vars
     self.optionNodes = []
@@ -26,6 +27,9 @@ class menuOptions(DirectObject):
     self.selected = 0
 
   def setOptions(self, options):
+
+    base.ignore("p1_left")
+    base.ignore("p1_right")
 
     if len(self.optionNodes) > 0:
     
@@ -50,10 +54,15 @@ class menuOptions(DirectObject):
 
     for i in range(len(options)):
 
-      optionNode = NodePath("MenuOptions_OptionNode_" + str(i))
-      optionNode.reparentTo(self.node)
-      optionNode.setZ(-i * .275)
-
+      #optionNode = NodePath("MenuOptions_OptionNode_" + str(i))
+      optionNode = DirectFrame(
+        frameSize=(-.1, .9, -.15, .1),
+        frameColor=(1,1,1,0),
+        pos=(0,0,-i * .275),
+        parent=self.node,
+      )
+      optionNode.setTransparency(TransparencyAttrib.MAlpha)
+      
       # Option Name Text
       optionName = OnscreenText(
         text = options[i][0], 
@@ -229,6 +238,8 @@ class menuOptions(DirectObject):
 
     base.accept("p1_up", self.activateKeyboard)
     base.accept("p1_down", self.activateKeyboard)
+    base.ignore("p1_left")
+    base.ignore("p1_right")
     base.ignore("p1_btna")
 
     for i in range(len(self.optionNodes)):
@@ -261,21 +272,13 @@ class menuOptions(DirectObject):
     for i in range(len(self.optionNodes)):
       node = self.optionNodes[i]
 
-      if i == self.selected:
-        color = (1,1,1,1)
-        if node[3] and node[4]:
-          node[3]['image'] = self.arrowEnabled
-          node[4]['image'] = self.arrowEnabled        
+      if i == self.selected:    
+        node[0]['image'] = self.arrowKbdSelect
+        node[0]['image_scale']= .06
+        node[0]['image_pos'] = (-.05,0,-.091)        
       else:
-        color = (0.3294117647058824,0.3294117647058824,0.3294117647058824,1)
-        if node[3] and node[4]:        
-          node[3]['image'] = self.arrowDisabled
-          node[4]['image'] = self.arrowDisabled
+        node[0]['image'] = None
 
-      try:
-        node[2].setFg(color)
-      except:
-        node[2]['text_fg'] = color
 
     # Set keyboard scroll
     base.ignore("p1_btna")

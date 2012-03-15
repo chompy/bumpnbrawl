@@ -2,25 +2,25 @@ framebuffer-multisample 1
 multisamples 2
 sync-video #f
 show-frame-rate-meter #t
-
-p1-up arrow_up
-p1-down arrow_down
-p1-left arrow_left
-p1-right arrow_right
-p1-btna shift
-p1-btnb z
-
-p2-up w
-p2-down s
-p2-left a
-p2-right d
-p2-btna q
-p2-btnb e
-
-p3-up joy1-up
-p3-down joy1-down
-p3-left joy1-left
-p3-right joy1-right
-p3-btna joy1-btn1
-p3-btnb joy1-btn2
-
+p1_up arrow_up
+p1_btna shift
+p1_btnb z
+p1_down arrow_down
+p2_up w
+p2_right d
+p2_down s
+p2_left a
+p2_btna q
+p2_btnb e
+p3_up u
+p3_right k
+p3_down j
+p3_left h
+p3_btna y
+p3_btnb i
+p4_up 8
+p4_right 6
+p4_down 5
+p4_left 4
+p4_btna 7
+p4_btnb 9
