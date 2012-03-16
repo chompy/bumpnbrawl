@@ -430,8 +430,11 @@ class mainMenu(FSM):
         return None
 
     # Save to conf file.
-    if not key == "escape": 
-      self.input.setKey(self.configKeys[inputDefine], key)
+    if not key == "escape":
+      if key == "backspace":
+        self.input.setKey(self.configKeys[inputDefine], "n/a")            
+      else: 
+        self.input.setKey(self.configKeys[inputDefine], key)      
     self.menuOptions.activateKeyboard()
     self.menuOptions.optionNodes[inputDefine][2]['text'] = self.inputHelp.getEventKey(self.configKeys[inputDefine])
 

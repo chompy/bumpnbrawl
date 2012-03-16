@@ -58,6 +58,8 @@ class gameHud(DirectObject):
     # Make player take snapshot
     if not player.snapshot:
       snapshot = player.takeSnapshot()
+    else:
+      snapshot = player.snapshot
 
     # Get Player class
     self.playerHuds[player.id]['player'] = player

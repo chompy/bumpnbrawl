@@ -104,7 +104,7 @@ class player:
     self.animMove = "run"
     self.moveSpecial = False
     self.specialCooldown = False
-    self.snapshot = None
+    self.snapshot = loader.loadTexture(base.assetPath + "/characters/" + character + "/picture.jpg")
     self.isNoReduce = False
     self.local = local
     self.doMovementLock = False
@@ -114,7 +114,7 @@ class player:
     self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 10.0)
 
     # Stats
-    self.accelerate = 18000
+    self.accelerate = 20000
     self.moveSpeed = 5.0
     self.power = 20.0
     self.resist = 15.0
@@ -350,7 +350,7 @@ class player:
         self.actor.setH(self.actor.getH() - 180)          
 
       # If knocked back by another force...
-      elif self.isKnockback and not self.moveVal == self.direction:
+      elif (vel[0] > 0 and self.direction[0] < 0) or (vel[0] < 0 and self.direction[0] > 0) or (vel[1] < 0 and self.direction[1] > 0) or (vel[1] > 0 and self.direction[1] < 0):
         self.setAnim("bump", True)
       
       # If moved by player the animation
