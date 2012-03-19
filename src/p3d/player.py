@@ -111,7 +111,7 @@ class player:
 
     # Set Start Position
     self.startPos = base.playerStart[self.id - 1]
-    self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 10.0)
+    self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 10.0 )
 
     # Stats
     self.accelerate = 20000
@@ -206,119 +206,130 @@ class player:
       # ODE Tile Collision
       tilePos = self.getTilePos()
       pos = self.ode_body.getPosition()
-      for i in base.tilePositions:
-        if not i['solid']: continue
 
-        # Below
-        if i['pos'][0] == tilePos[0] and i['pos'][1] == tilePos[1] and i['pos'][2] == tilePos[2] - 1:
-          vel[2] = .08
-          self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
-        
-        elif self.colWithTile(i['pos'] * 2.0):
-          vel[0] = 0
-          vel[1] = 0
-          for x in range(len(self.moveVal)):
-            if (i['pos'][x] * 2.0) - pos[x] < 0:
-              force[x] = 20000
-            else:
-              force[x] = -20000
-        
+      for x in range(-2,2):
+        for y in range(0,2):
+          for z in range(-2,2):
 
-      # Fall off the side
-      if pos[2] < -10:
-        if not self.isDead:
-          lerpMe = LerpColorScaleInterval(self.actor, .5, (1,1,1,0))
-          lerpMe.start()
+ 
+            if str(int(tilePos[0]) + x) + "_" + str(int(tilePos[1]) + y) + "_" + str(int(tilePos[2]) + z) in base.tileCoords:
 
-          taskMgr.doMethodLater(.6, self.ode_body.setPosition, "Player_" + str(self.id) + "_FallResetPosition", extraArgs=[self.startPos[0], self.startPos[1], self.startPos[2] + 4], sort=1)
-          taskMgr.doMethodLater(.6, self.actor.setColorScale, "Player_" + str(self.id) + "_FallReappear", extraArgs=[(1,1,1,1)], sort=2)
-          taskMgr.doMethodLater(.65, self.particlePlay, "Player_" + str(self.id) + "_FallPoof", extraArgs=['diesplosion', 1.5], sort=3)
+              i = base.tileCoords[str(int(tilePos[0]) + x) + "_" + str(int(tilePos[1]) + y) + "_" + str(int(tilePos[2]) + z)]
 
-        self.isDead = True
-        vel[2] = 0
-        force[2] = 0
-      else:
-        self.isDead = False
+              if not i['solid']: continue
 
-
-      # ODE Player Collision
-
-      for i in base.players:
-        if i == self: continue
-        if i.noCollide == self or self.noCollide == i: continue
-
-        if self.colWithNode(i.actor, i.dimensions):
-
-          # Get Bump Power
-          myPower = self.getBumpPower(i.resist)
-          enePower = i.getBumpPower(self.resist)
-          
-          eneForce = [0,0,0]
-          eneVel = [0,0,0]
-
-          # Repel the players so they don't get stuck on each other.
-          oPos = i.actor.getPos()
-          for x in range(len(self.moveVal)):
-            if oPos[x] - pos[x] < 0:
-              force[x] = 40000
-              eneForce[x] = -40000
-
-              vel[x] = abs(enePower[x])
-              eneVel[x] = -abs(myPower[x])
-
-              if self.moveSpecial:
-                vel[x] = 0
-                force[x] = 50000
-                self.moveSpecial = False
-              elif i.moveSpecial:
-                eneVel[x] = 0
-                eneForce[x] = -50000
-                i.moveSpecial = False
+              # Below
+              if i['pos'][0] == tilePos[0] and i['pos'][1] == tilePos[1] and i['pos'][2] == tilePos[2] - 1:
+                vel[2] = .08
+                self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
               
+              elif self.colWithTile(i['pos'] * 2.0):
+
+                for x in range(len(self.moveVal)):
+                  if (i['pos'][x] * 2.0) - pos[x] < 0:                     
+                    if vel[x] <= 0:
+                      vel[x] = 2.0
+                  else:
+                    if vel[x] > 0:
+                      vel[x] = -2.0
+        
+              
+
+            # Fall off the side
+            if pos[2] < -10:
+              if not self.isDead:
+                lerpMe = LerpColorScaleInterval(self.actor, .5, (1,1,1,0))
+                lerpMe.start()
+
+                taskMgr.doMethodLater(.6, self.ode_body.setPosition, "Player_" + str(self.id) + "_FallResetPosition", extraArgs=[self.startPos[0], self.startPos[1], self.startPos[2] + 4], sort=1)
+                taskMgr.doMethodLater(.6, self.actor.setColorScale, "Player_" + str(self.id) + "_FallReappear", extraArgs=[(1,1,1,1)], sort=2)
+                taskMgr.doMethodLater(.65, self.particlePlay, "Player_" + str(self.id) + "_FallPoof", extraArgs=['diesplosion', 1.5], sort=3)
+
+              self.isDead = True
+              vel[2] = 0
+              force[2] = 0
             else:
-              force[x] = -40000
-              eneForce[x] = 40000
-
-              vel[x] = -abs(enePower[x])
-              eneVel[x] = abs(myPower[x])
-
-              if self.moveSpecial:
-                vel[x] = 0
-                force[x] = -50000
-                self.moveSpecial = False
-              elif i.moveSpecial:
-                eneVel[x] = 0
-                eneForce[x] = 50000
-                i.moveSpecial = False
-
-          if not i.moveSpecial:
-            
-
-            i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
-            i.ode_body.setForce(eneForce[0], eneForce[1], eneForce[2])
-
-            if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
-              i.reduceResist()
-
-          if not self.moveSpecial:
-
-            velTest = i.ode_body.getLinearVel()
-          
-            if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
-              self.reduceResist()
-
-              # Play stars particle effect
-              self.particlePlay('stars', .5)
+              self.isDead = False
 
 
-          for x in range(len(myPower)):
-            if abs(enePower[x]) >= 5.05:
-              self.actions.drop(.5)
-            if abs(myPower[x]) >= 5.05:
-              i.actions.drop(.5)
+            # ODE Player Collision
 
-          self.setNoCollide(.25, i)
-          i.setNoCollide(.25, self)
+            for i in base.players:
+              if i == self: continue
+              if i.noCollide == self or self.noCollide == i: continue
+
+              if self.colWithNode(i.actor, i.dimensions):
+
+                # Get Bump Power
+                myPower = self.getBumpPower(i.resist)
+                enePower = i.getBumpPower(self.resist)
+                
+                eneForce = [0,0,0]
+                eneVel = [0,0,0]
+
+                # Repel the players so they don't get stuck on each other.
+                oPos = i.actor.getPos()
+                for x in range(len(self.moveVal)):
+                  if oPos[x] - pos[x] < 0:
+                    force[x] = 40000
+                    eneForce[x] = -40000
+
+                    vel[x] = abs(enePower[x])
+                    eneVel[x] = -abs(myPower[x])
+
+                    if self.moveSpecial:
+                      vel[x] = 0
+                      force[x] = 50000
+                      self.moveSpecial = False
+                    elif i.moveSpecial:
+                      eneVel[x] = 0
+                      eneForce[x] = -50000
+                      i.moveSpecial = False
+                    
+                  else:
+                    force[x] = -40000
+                    eneForce[x] = 40000
+
+                    vel[x] = -abs(enePower[x])
+                    eneVel[x] = abs(myPower[x])
+
+                    if self.moveSpecial:
+                      vel[x] = 0
+                      force[x] = -50000
+                      self.moveSpecial = False
+                    elif i.moveSpecial:
+                      eneVel[x] = 0
+                      eneForce[x] = 50000
+                      i.moveSpecial = False
+
+                if not i.moveSpecial:
+                  
+
+                  i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
+                  i.ode_body.setForce(eneForce[0], eneForce[1], eneForce[2])
+
+                  if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
+                    i.reduceResist()
+
+                if not self.moveSpecial:
+
+                  velTest = i.ode_body.getLinearVel()
+                
+                  if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
+                    self.reduceResist()
+
+                    # Play stars particle effect
+                    self.particlePlay('stars', .5)
+
+
+                for x in range(len(myPower)):
+                  if abs(enePower[x]) >= 5.05:
+                    self.actions.drop(.5)
+                  if abs(myPower[x]) >= 5.05:
+                    i.actions.drop(.5)
+
+                self.setNoCollide(.25, i)
+                i.setNoCollide(.25, self)
 
       # ODE Step
 

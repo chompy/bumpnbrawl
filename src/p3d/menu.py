@@ -273,8 +273,16 @@ class mainMenu(FSM):
     # Set Window Properties
     wp = WindowProperties.getDefault() 
     if self.windowMode:
-      wp.setSize(screensize[0], screensize[1]) 
-      wp.setOrigin(0,0) 
+
+      self.windowOrigin = [wp.getXOrigin(), wp.getYOrigin()]
+      self.windowSize = [base.win.getXSize(), base.win.getYSize()]
+    
+      wp.setSize(screensize[0], screensize[1])
+      wp.setOrigin(0,0)
+
+    else:
+      wp.setSize(self.windowSize[0], self.windowSize[1])
+      wp.setOrigin(self.windowOrigin[0], self.windowOrigin[1])
 
     wp.setUndecorated(self.windowMode) 
     base.win.requestProperties(wp) 

@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw
 from panda3d.core import NodePath, Texture
+from pandac.PandaModules import Fog
 import ConfigParser, os, math
 
 class mapLoader:
@@ -16,6 +17,15 @@ class mapLoader:
 
     # Set Theme
     self.theme = "hq"
+
+    # Setup some Fog
+    #color = (0, 0, 0, .8)
+    #self.fog = Fog("FogNode")
+    #self.fog.setColor(color)
+    #self.fog.setLinearRange(0,320)
+    #self.fog.setLinearFallback(0, -10, 120)
+    #render.attachNewNode(self.fog)
+    #render.setFog(self.fog)
 
     # Create Node Path
     self.node = NodePath("Map")
@@ -44,6 +54,9 @@ class mapLoader:
     # Load up tiles from PNG
     image = Image.open(mapFile)
     size = image.size
+
+    # Max Height
+    self.maxHeight = 0
 
     # Prepare Tile Array
     self.tiles = []
@@ -96,7 +109,8 @@ class mapLoader:
       try:
         height = self.tileData.getint(str(bId), "height")
       except:
-        height = 1            
+        height = 1   
+  
 
       # Overlap Tile
       try:
