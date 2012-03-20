@@ -2,105 +2,109 @@ from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 
+import asyncore
+import socket
+
 # MESSAGE ID REFERENCE
 USERNAME = chr(1)
 USERID = chr(2)
 POSITION = chr(3)
 CHAT = chr(4)
 
+class BnBClientHandler(asyncore.dispatcher_with_send):
 
-class BnBServer(LineReceiver):
+  def __init__(self, sock, userid):
 
-  def __init__(self, users, myid):
-    self.users = users
+    asyncore.dispatcher_with_send.__init__(self, sock)
+    self.buffer = ""
+    self.prepareMsg(USERNAME, "")
+
+    # Vars
     self.name = None
-    self.id = myid
+    self.id = userid
+    self.isActive = True
 
-  def connectionMade(self):
+  def handle_read(self):
+    data = self.recv(1024)
+    if not data: return None
 
-    """
-    Connect was made, send request for username.
-    """
+    msgId = data[0]
+    data = data[1:].strip()
 
-    print "New player connected with ID #" + str(self.id) + "."
-
-    self.sendLine(USERNAME)
-
-  def connectionLost(self, reason):
-
-    """
-    User disconnected, delete key.
-    """
-
-    print "Player #" + str(self.id) + " has disconnected."
-  
-    if self.users.has_key(self.name):
-      del self.users[self.name]
-
-  def lineReceived(self, line):
-
-    """
-    Message recieved from player client.
-    """
-
-    if not line: return None
-  
-    msgId = line[0]
-    line = line[1:].strip()
-
-    # Recieve and set Username. Send user ID in response
     if msgId == USERNAME:
-      self.name = line
-      self.sendMsg(USERID, chr(self.id))
-      #self.sendLine("Welcome " + self.name)
-      print "Recieved username "+ self.name + " from player #" + str(self.id) + "."
+      self.name = data
+      print "Player #%s username is %s." % (str(self.id), self.name)
 
-    # MsgID not recongized
+      self.prepareMsg(USERID, chr(self.id))     
+
     else:
-      print "Player #" + str(self.id) + " sent message with ID #" + str(ord(msgId)) + ". No response available."
-    
+      print "Player #%s sent unrecognized message type, #%s." % str(ord(msgId))
+             
 
-  def sendMsg(self, msgType, msg):
+  def prepareMsg(self, msgType, msg):
 
     """
-    Handles sending a message of a certain type.
+    Prepare a message to be sent.
     """
 
-    if not msgType or not msg: return None
-    self.sendLine(msgType + msg)
+    self.buffer = msgType + msg
+
+  def writable(self):
+    return (len(self.buffer) > 0)
+
+  def handle_write(self):
+    sent = self.send(self.buffer)
+    if sent:
+      self.buffer = self.buffer[sent:]
+    else:
+      self.buffer = ""
+
+  def handle_close(self):
+    print "Player #%s has disconnected." % str(self.id)
+    self.close()
+    self.isActive = False
       
 
-  # THE FOLLOWING WERE PART OF THE EXAMPLE PROGRAM THAT THIS
-  # SERVER IS BASED ON AND ARE JUST HERE FOR REFERENCE
-  def handle_GETNAME(self, name):
-    if self.users.has_key(name):
-      self.sendLine("Name taken, please choose another.")
-      return
-    self.sendLine("Welcome, %s!" % (name,))
-    self.name = name
-    self.users[name] = self
-    self.state = "CHAT"
+class BnBServer(asyncore.dispatcher):
 
-  def handle_CHAT(self, message):
-    message = "<%s> %s" % (self.name, message)
-    for name, protocol in self.users.iteritems():
-      if protocol != self:
-        protocol.sendLine(message)
+  def __init__(self, host, port):
 
+    # Vars
+    self.users = []
+    self.idCt = 0
 
-class BnBFactory(Factory):
+    # Network Init
+    asyncore.dispatcher.__init__(self)
+    self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.set_reuse_addr()
+    self.bind((host, port))
+    self.listen(5)
 
-  def __init__(self):
-    self.users = {} # maps user names to Chat instances
-    self.idCt = 0   # User ID Counter
+    print "BumpNBrawl Server v1 - Server started on port %s." % str(port)
 
-    print "BumpNBrawl Server v1 - Server started."
+  def handle_accept(self):
+    pair = self.accept()
+    if pair is None:
+      pass
+    else:
+      sock, addr = pair
 
-  def buildProtocol(self, addr):
-    self.idCt += 1  # Plus one to ID, set new user to this ID
-    return BnBServer(self.users, self.idCt)
+      myId = None
+      for i in range(self.idCt):
+        if not self.users[i].isActive:
+          myId = i
+          self.users[i].__init__(sock, myId)
+          break
+          
+      if not myId:
+        self.idCt += 1  
+        myId = self.idCt
 
-reactor.listenTCP(31592, BnBFactory())
-reactor.run()
+        handler = BnBClientHandler(sock, myId)
+        self.users.append(handler)
 
+      print 'New Player connected with ID # %s from %s.' % (str(myId), repr(addr))        
+
+server = BnBServer('localhost', 31592)
+asyncore.loop()
 

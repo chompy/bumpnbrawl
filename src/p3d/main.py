@@ -4,7 +4,7 @@ from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 
 # Import game specific modules
-import mapLoader, player, camera, hud, gameInput
+import mapLoader, player, camera, hud, gameInput, network
 
 # Config
 loadPrcFile("../../assets/Config.prc")

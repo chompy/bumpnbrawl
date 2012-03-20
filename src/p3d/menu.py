@@ -281,8 +281,10 @@ class mainMenu(FSM):
       wp.setOrigin(0,0)
 
     else:
-      wp.setSize(self.windowSize[0], self.windowSize[1])
-      wp.setOrigin(self.windowOrigin[0], self.windowOrigin[1])
+      try:
+        wp.setSize(self.windowSize[0], self.windowSize[1])
+        wp.setOrigin(self.windowOrigin[0], self.windowOrigin[1])
+      except AttributeError: 1
 
     wp.setUndecorated(self.windowMode) 
     base.win.requestProperties(wp) 

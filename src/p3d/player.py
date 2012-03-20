@@ -111,7 +111,7 @@ class player:
 
     # Set Start Position
     self.startPos = base.playerStart[self.id - 1]
-    self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 10.0 )
+    self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 20.0 )
 
     # Stats
     self.accelerate = 20000
