@@ -7,8 +7,7 @@ timeout_in_miliseconds=3000
 # MESSAGE ID REFERENCE
 USERNAME = chr(1)
 USERID = chr(2)
-POSITION = chr(3)
-CHAT = chr(4)
+CHARACTER_DATA = chr(3)
 
 
 class networkHandler(asyncore.dispatcher):
@@ -23,6 +22,10 @@ class networkHandler(asyncore.dispatcher):
 
     self.name = "Chompy"
     self.id = None
+    self.gameChannel = 1
+
+    # Network send events
+    base.accept("network-send", self.sendEventMsg)
 
   def handle_connect(self):
     print "Connected to host."
@@ -36,7 +39,7 @@ class networkHandler(asyncore.dispatcher):
     if data <= 0: return None
 
     msgId = data[0]
-    data = data[1:].strip()
+    data = data[1:]
 
     # Send Player Username
     if msgId == USERNAME:
@@ -48,6 +51,8 @@ class networkHandler(asyncore.dispatcher):
       self.id = int(ord(data))
       print "Recieved ID#%s for player %s." % (str(self.id), self.name)
 
+    
+
 
   def prepareMsg(self, msgType, msg):
 
@@ -56,6 +61,26 @@ class networkHandler(asyncore.dispatcher):
     """
 
     self.buffer = msgType + msg
+
+  def getMsgType(self, msgTypeStr):
+
+    """
+    Get message type from strings.
+    """
+
+    msgType = None
+    if msgTypeStr == "character_data":
+      msgType = CHARACTER_DATA
+      
+    elif msgTypeStr == "position":
+      return None
+    else:
+      return None
+
+    return msgType
+
+  def sendEventMsg(self, msgType, msg):
+    self.prepareMsg(self.getMsgType(msgType), msg)
     
   def writable(self):
     return (len(self.buffer) > 0)

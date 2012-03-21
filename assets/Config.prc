@@ -1,6 +1,6 @@
 framebuffer-multisample 1
 multisamples 2
-sync-video #f
+sync-video #t
 show-frame-rate-meter #t
 p1_up joy1_axis1+
 p1_btna joy1_btn1

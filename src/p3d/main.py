@@ -81,8 +81,8 @@ class ChompinBomper(ShowBase):
     base.players = []
     base.players.append(player.player("chompy", True, 1))
     base.players.append(player.player("chompy", True, 2))
-    base.players.append(player.player("chompy", False))
-    base.players.append(player.player("chompy", False))   
+    #base.players.append(player.player("chompy", False))
+    #base.players.append(player.player("chompy", False))   
 
     # Load Camera
     self.camera = camera.camera(base.players[0])
