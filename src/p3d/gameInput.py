@@ -57,6 +57,10 @@ class gameInput(DirectObject):
         base.accept(base.controls[y][i], messenger.send, [i])
         base.accept(base.controls[y][i] + "-up", messenger.send, [i+"-up"])
 
+        # Network listeners
+        self.accept(base.controls[y][i], messenger.send, ["network-send", ["player_input", i]])
+        self.accept(base.controls[y][i] + "-up", messenger.send, ["network-send", ["player_input", i+"-up"]])
+
   def pollKeys(self, task = None):
     if not task:
       taskMgr.add(self.pollKeys, "GameInput_KeyPolling")

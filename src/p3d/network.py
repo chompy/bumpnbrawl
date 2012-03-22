@@ -1,13 +1,20 @@
-import asyncore,socket,struct 
+import asyncore,socket,struct,player
 from direct.task.TaskManagerGlobal import taskMgr 
 from direct.task import Task 
+
+import direct.directbase.DirectStart
+from direct.showbase.ShowBase import ShowBase
 
 timeout_in_miliseconds=3000
 
 # MESSAGE ID REFERENCE
 USERNAME = chr(1)
 USERID = chr(2)
-CHARACTER_DATA = chr(3)
+JOIN_CHANNEL = chr(3)
+CLIENT_DATA = chr(4)    # NO OF CHARACTERS:
+CHARACTER_DATA = chr(5) # CHAR SLOT:CHAR COLOR CODE:CHAR SKIN:CHAR NAME/playername [012chompy/Renoki]
+PLAYER_INPUT = chr(6)
+POSITION = chr(7)
 
 
 class networkHandler(asyncore.dispatcher):
@@ -24,6 +31,8 @@ class networkHandler(asyncore.dispatcher):
     self.id = None
     self.gameChannel = 1
 
+    self.netPlayers = {}
+
     # Network send events
     base.accept("network-send", self.sendEventMsg)
 
@@ -38,19 +47,105 @@ class networkHandler(asyncore.dispatcher):
     data = self.recv(1024)
     if data <= 0: return None
 
-    msgId = data[0]
-    data = data[1:]
+    split = data.split("\n")
 
-    # Send Player Username
-    if msgId == USERNAME:
-      print "Server is requesting username for %s." % self.name
-      self.prepareMsg(USERNAME, self.name)
+    for data in split:
 
-    # Retrieve User ID
-    elif msgId == USERID:
-      self.id = int(ord(data))
-      print "Recieved ID#%s for player %s." % (str(self.id), self.name)
+      if not data: continue
 
+      msgId = data[0]
+      data = data[1:]
+
+      # Send Player Username
+      if msgId == USERNAME:
+        print "Server is requesting username for %s." % self.name
+        self.prepareMsg(USERNAME, self.name)
+
+      # Retrieve User ID
+      elif msgId == USERID:
+        self.id = int(ord(data))
+        print "Recieved ID#%s for player %s." % (str(self.id), self.name)
+
+        # Join Channelo
+        print "Attempting to join channel #%s." % str(self.gameChannel)
+        self.prepareMsg(JOIN_CHANNEL, chr(self.gameChannel))
+
+      # Join Channel Success
+      elif msgId == JOIN_CHANNEL:
+        success = bool(ord(data))
+
+        if success:
+          print "Joined channel #%s." % str(self.gameChannel)
+
+          # Send Character data
+          for i in base.players:
+            if i.local:
+              self.prepareMsg(CHARACTER_DATA, str(chr(int(i.controls)) + chr(int(1)) + chr(int(1)) + i.character))
+          
+        else:
+          print "Failed to join channel #%s." % str(self.gameChannel)
+
+      # Character data
+      elif msgId == CHARACTER_DATA:
+
+        pId = int(ord(data[0]))
+        slot = int(ord(data[1]))
+        color = int(ord(data[2]))
+        skin = int(ord(data[3]))
+        name = str(data[4:])
+
+        if name:
+
+          # If player already exists don't do anything
+          try:
+            for i in self.netPlayers[pId]:
+              if i.controls == slot:
+                return None
+          except KeyError: 1
+        
+          char = player.player(name, False, slot, pId)
+          base.players.append(char)
+
+          try:
+            self.netPlayers[pId].append(char)
+          except:
+            self.netPlayers[pId] = [char]        
+
+        # If no character name given it's assumed we are removing this player slot.
+        else:
+          for i in base.players:
+            if i.onlineId == pId and self.controls == slot:
+              # TODO: Player removal stuff. [Probably call function]
+              print "Player removed. PID%s SLOT%s." % (str(pId), str(slot))
+
+      # Get Player Inputs
+      elif msgId == PLAYER_INPUT:
+
+        pId = int(ord(data[0]))
+        messenger.send(str(pId) + data[1:])
+                      
+      # Sync up player positions
+      elif msgId == POSITION:   
+        pId = int(ord(data[0]))
+        slot = int(ord(data[1]))
+        otherData = str(data[2:]).split("x")
+
+        x = float(otherData[0])
+        y = float(otherData[1])
+        z = float(otherData[2])
+        h = float(otherData[3])
+
+        try:
+          for i in self.netPlayers[pId]:
+            if int(i.controls) == slot:
+              i.ode_body.setPosition((x,y,z))
+              i.actor.setH(h)
+        except KeyError: 1
+
+      else:
+
+        print "Server sent unrecognized message id #%s." % str(ord(msgId))
+        
     
 
 
@@ -60,7 +155,7 @@ class networkHandler(asyncore.dispatcher):
     Prepares a message to be sent.
     """
 
-    self.buffer = msgType + msg
+    self.buffer += msgType + msg + "\n"
 
   def getMsgType(self, msgTypeStr):
 
@@ -73,7 +168,9 @@ class networkHandler(asyncore.dispatcher):
       msgType = CHARACTER_DATA
       
     elif msgTypeStr == "position":
-      return None
+      return POSITION
+    elif msgTypeStr == "player_input":
+      return PLAYER_INPUT
     else:
       return None
 
@@ -97,7 +194,7 @@ def doNetworkUpdate(task):
   asyncore.loop(count = 1, timeout=0)
   return task.cont
 
-client = networkHandler("localhost", 31592)    
+client = networkHandler("chompy.co", 31592)    
 taskMgr.add(doNetworkUpdate, "NetworkLoop")
 
   

@@ -79,14 +79,14 @@ class ChompinBomper(ShowBase):
     # Load Players
     base.playerid = 0
     base.players = []
-    base.players.append(player.player("chompy", True, 1))
     base.players.append(player.player("chompy", True, 2))
+    #base.players.append(player.player("chompy", True, 2))
     #base.players.append(player.player("chompy", False))
     #base.players.append(player.player("chompy", False))   
 
     # Load Camera
     self.camera = camera.camera(base.players[0])
-    self.camera.add(base.players[1])
+    #self.camera.add(base.players[1])
 
     # Game Hud
     self.hud = hud.gameHud()

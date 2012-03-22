@@ -10,7 +10,7 @@ GRAVITY = .5
 
 class player:
 
-  def __init__(self, character = "cuby", local=True, controls = 0):
+  def __init__(self, character = "cuby", local=True, controls = 0, onlineId = None):
  
     """
     Init a player character.
@@ -19,6 +19,9 @@ class player:
     # Set ID
     base.playerid += 1
     self.id = base.playerid
+
+    # Set Online ID
+    self.onlineId = onlineId
 
     # Character name
     self.character = character.strip().lower()
@@ -120,12 +123,12 @@ class player:
     self.resist = 15.0
 
     # Keyboard Interface
-    if local:
-      self.controls = str(controls)
+    self.controls = str(controls)
 
     # Setup Specials module which extudes the actions module.
     self.actions = specials.specials(self)
-    if local:
+
+    if self.local:
       base.accept("p" + self.controls + "_up", self.setMoveVal, [[0,1]])
       base.accept("p" + self.controls + "_down", self.setMoveVal, [[0,-1]])
       base.accept("p" + self.controls + "_left", self.setMoveVal, [[-1,0]])
@@ -137,7 +140,24 @@ class player:
       base.accept("p" + self.controls + "_right-up", self.setMoveVal, [[.1,0]])
       
       base.accept("p" + self.controls + "_btna", self.actions.pickup)
-      base.accept("p" + self.controls + "_btnb", self.actions.useSpecial)
+      base.accept("p" + self.controls + "_btnb", self.actions.useSpecial)   
+
+      # Position Send
+      taskMgr.doMethodLater(1.5, self.networkPosition, "Player_+ " + str(self.id) + "_SendPositionToNetwork")
+       
+    else:
+      base.accept(str(self.onlineId) + "p" + self.controls + "_up", self.setMoveVal, [[0,1]])
+      base.accept(str(self.onlineId) + "p" + self.controls + "_down", self.setMoveVal, [[0,-1]])
+      base.accept(str(self.onlineId) + "p" + self.controls + "_left", self.setMoveVal, [[-1,0]])
+      base.accept(str(self.onlineId) + "p" + self.controls + "_right", self.setMoveVal, [[1,0]])
+
+      base.accept(str(self.onlineId) + "p" + self.controls + "_up-up", self.setMoveVal, [[0,.1]])
+      base.accept(str(self.onlineId) + "p" + self.controls + "_down-up", self.setMoveVal, [[0,.1]])
+      base.accept(str(self.onlineId) + "p" + self.controls + "_left-up", self.setMoveVal, [[.1,0]])
+      base.accept(str(self.onlineId) + "p" + self.controls + "_right-up", self.setMoveVal, [[.1,0]])
+      
+      base.accept(str(self.onlineId) + "p" + self.controls + "_btna", self.actions.pickup)
+      base.accept(str(self.onlineId) + "p" + self.controls + "_btnb", self.actions.useSpecial)
     
     self.i = basePolling.Interface()
 
@@ -382,6 +402,7 @@ class player:
   
 
       task.lastTime = task.time
+      
     return task.cont
 
 
@@ -731,3 +752,11 @@ class player:
     p.start(self.actor, render)
     taskMgr.doMethodLater(time, p.softStop, "Player_" + str(self.id) + "_StarsParticleStop", extraArgs=[])
     taskMgr.doMethodLater(time * 2.5, p.cleanup, "Player_" + str(self.id) + "_StarsParticleCleanup", extraArgs=[])    
+
+  def networkPosition(self, task):
+
+    pos = self.actor.getPos()
+    h = self.actor.getH()
+    messenger.send("network-send", ["position", chr(int(self.controls)) + str(pos[0]) + "x" + str(pos[1]) + "x" + str(pos[2]) + "x" + str(h)])
+
+    return task.again
