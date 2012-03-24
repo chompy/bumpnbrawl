@@ -6,7 +6,7 @@ USERNAME = chr(1)
 USERID = chr(2)
 JOIN_CHANNEL = chr(3)
 CLIENT_DATA = chr(4)    # NO OF CHARACTERS:
-CHARACTER_DATA = chr(5) # CHAR SLOT:CHAR COLOR CODE:CHAR SKIN:CHAR NAME/playername [012chompy/Renoki]
+CHARACTER_DATA = chr(5) # CHAR SLOT:CHAR COLOR CODE:CHAR SKIN:START SLOT:CHAR NAME/playername [012chompy/Renoki]
 PLAYER_INPUT = chr(6)
 POSITION = chr(7)
 #CHAT = chr(4)
@@ -25,7 +25,6 @@ class BnBClientHandler(asyncore.dispatcher_with_send):
     self.isActive = True
     self.channel = None
     self.playerData = {}
-    self.players = {}
 
   def handle_read(self):
     data = self.recv(1024)
@@ -67,24 +66,34 @@ class BnBClientHandler(asyncore.dispatcher_with_send):
 
         slot = int(ord(data[0]))
         color = int(ord(data[1]))
-        skin = int(ord(data[2]))
+        skin = int(ord(data[2]))   
         name = str(data[3:])
 
         if name:
-          self.playerData[slot] = [name, color, skin]
+
           print "Player #%s sent character data for local slot #%s." % (str(self.id), str(slot))
+
+          # Get Start Pos
+          start = 0
+          for i in server.users:
+            if i.channel == self.channel:
+              start += len(i.playerData)
+
+          start += 1
+
+          self.playerData[slot] = [name, color, skin, start]
 
           # Send my character data to everyone
           for i in server.users:
-            if not i == self:
-              i.prepareMsg(CHARACTER_DATA, chr(self.id) + chr(slot) + chr(color) + chr(skin) + name)
+            if not i == self and i.channel == self.channel:
+              i.prepareMsg(CHARACTER_DATA, chr(self.id) + chr(slot) + chr(color) + chr(skin) + chr(start) + name)
 
           # Get everyone's player data
           for i in server.users:
-            if not i == self:
-              for x in i.playerData:
-                self.prepareMsg(CHARACTER_DATA, chr(i.id) + chr(x) + chr(i.playerData[x][1]) + chr(i.playerData[x][2]) + i.playerData[x][0])
-          
+            for x in i.playerData:
+              if i.channel == self.channel:
+                self.prepareMsg(CHARACTER_DATA, chr(i.id) + chr(x) + chr(i.playerData[x][1]) + chr(i.playerData[x][2]) + chr(i.playerData[x][3]) + i.playerData[x][0])
+
         else:
           del self.playerData[slot]
         
@@ -94,7 +103,7 @@ class BnBClientHandler(asyncore.dispatcher_with_send):
 
         pInput = str(data)
 
-        print "Player #%s sent input '%s'." % (str(self.id), pInput)
+        #print "Player #%s sent input '%s'." % (str(self.id), pInput)
 
         # Send to other players
         for i in server.users:
@@ -126,7 +135,7 @@ class BnBClientHandler(asyncore.dispatcher_with_send):
     Prepare a message to be sent.
     """
 
-    self.buffer = msgType + msg + "\n"
+    self.buffer += msgType + msg + "\n"
 
   def writable(self):
     return (len(self.buffer) > 0)
@@ -165,9 +174,6 @@ class BnBServer(asyncore.dispatcher):
     self.channelMode = {}   # Channel Modes: 0 = Lobby; 1 = Game Play
 
     print "BumpNBrawl Server v1 - Server started on port %s." % str(port)
-
-  def test(self):
-    return "YEP WORKING"
 
   def handle_accept(self):
     pair = self.accept()
@@ -222,6 +228,6 @@ class BnBServer(asyncore.dispatcher):
           
     
 
-server = BnBServer('localhost', 31592)
+server = BnBServer('', 31592)
 asyncore.loop()
 

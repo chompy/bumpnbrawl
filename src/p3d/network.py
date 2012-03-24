@@ -12,10 +12,10 @@ USERNAME = chr(1)
 USERID = chr(2)
 JOIN_CHANNEL = chr(3)
 CLIENT_DATA = chr(4)    # NO OF CHARACTERS:
-CHARACTER_DATA = chr(5) # CHAR SLOT:CHAR COLOR CODE:CHAR SKIN:CHAR NAME/playername [012chompy/Renoki]
+CHARACTER_DATA = chr(5) # CHAR SLOT:CHAR COLOR CODE:CHAR SKIN:START SLOT:CHAR NAME/playername [012chompy/Renoki]
 PLAYER_INPUT = chr(6)
 POSITION = chr(7)
-
+#CHAT = chr(4)
 
 class networkHandler(asyncore.dispatcher):
 
@@ -69,7 +69,7 @@ class networkHandler(asyncore.dispatcher):
         # Join Channelo
         print "Attempting to join channel #%s." % str(self.gameChannel)
         self.prepareMsg(JOIN_CHANNEL, chr(self.gameChannel))
-
+  
       # Join Channel Success
       elif msgId == JOIN_CHANNEL:
         success = bool(ord(data))
@@ -92,9 +92,19 @@ class networkHandler(asyncore.dispatcher):
         slot = int(ord(data[1]))
         color = int(ord(data[2]))
         skin = int(ord(data[3]))
-        name = str(data[4:])
+        start = int(ord(data[4]))
+        name = str(data[5:])
 
         if name:
+
+          # If local player then we probably need start pos
+          if pId == self.id:
+            for i in base.players:
+              if i.local and int(i.controls) == int(slot):            
+                i.startPos = base.playerStart[start - 1]
+                i.ode_body.setPosition(i.startPos[0], i.startPos[1], i.startPos[2] + 20.0 )     
+                break
+            return True             
 
           # If player already exists don't do anything
           try:
@@ -194,7 +204,7 @@ def doNetworkUpdate(task):
   asyncore.loop(count = 1, timeout=0)
   return task.cont
 
-client = networkHandler("chompy.co", 31592)    
+client = networkHandler("localhost", 31592)    
 taskMgr.add(doNetworkUpdate, "NetworkLoop")
 
   

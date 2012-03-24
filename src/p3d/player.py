@@ -249,9 +249,12 @@ class player:
                   if (i['pos'][x] * 2.0) - pos[x] < 0:                     
                     if vel[x] <= 0:
                       vel[x] = 2.0
+                    
                   else:
                     if vel[x] > 0:
-                      vel[x] = -2.0
+                      vel[x] = -1.0
+                    
+
         
               
 
