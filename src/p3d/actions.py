@@ -37,6 +37,8 @@ class actions:
 
     if self.disablePickup: return None
 
+    if self.player.local: self.player.networkPosition()
+
     pos = self.player.actor.getPos()
     tilepos = self.player.getTilePos()
     tilepos[0] += self.player.direction[0]
@@ -147,6 +149,9 @@ class actions:
 
     # If player is not carrying anything reset pickupObj.
     if not self.pickupObj: return None
+
+    # Update Player Position
+    if self.player.local: self.player.networkPosition()
 
     # Remove Pick up task.
     taskMgr.remove("Player_" + str(self.player.id) + "_Action_Pickup")
@@ -308,6 +313,7 @@ class actions:
     Use this player's special ability.
     """
 
+    if self.player.local: self.player.networkPosition()
     function = getattr(self, self.player.character + "_special")
     function()    
 

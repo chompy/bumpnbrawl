@@ -124,9 +124,11 @@ class networkHandler(asyncore.dispatcher):
         # If no character name given it's assumed we are removing this player slot.
         else:
           for i in base.players:
-            if i.onlineId == pId and self.controls == slot:
+            if i.onlineId == pId and int(i.controls) == slot:
               # TODO: Player removal stuff. [Probably call function]
               print "Player removed. PID%s SLOT%s." % (str(pId), str(slot))
+              self.netPlayers[pId].remove(i)
+              i.destroy()
 
       # Get Player Inputs
       elif msgId == PLAYER_INPUT:
@@ -204,7 +206,7 @@ def doNetworkUpdate(task):
   asyncore.loop(count = 1, timeout=0)
   return task.cont
 
-client = networkHandler("localhost", 31592)    
+client = networkHandler("chompy.co", 31592)    
 taskMgr.add(doNetworkUpdate, "NetworkLoop")
 
   

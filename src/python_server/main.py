@@ -150,10 +150,17 @@ class BnBClientHandler(asyncore.dispatcher_with_send):
   def handle_close(self):
     print "Player #%s has disconnected." % str(self.id)
 
+    # Send disconnect to other clients
+    for x in server.users:
+      if not x == self:
+        for y in self.playerData:
+          x.prepareMsg(CHARACTER_DATA, chr(self.id) + chr(y) + chr(0) + chr(0) + chr(0) )
+
+    # Close connection
     server.clearUserFromChannel(self.channel, self.id)
     self.close()
     self.isActive = False
-    self.channel = None    
+    self.channel = None              
 
 class BnBServer(asyncore.dispatcher):
 

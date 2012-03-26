@@ -1,5 +1,5 @@
 from direct.actor.Actor import Actor
-from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib
+from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib, CardMaker, TextureStage
 from direct.particles.ParticleEffect import ParticleEffect
 from direct.interval.LerpInterval import LerpColorScaleInterval
 from lib import basePolling
@@ -75,6 +75,18 @@ class player:
     for i in range(len(pos1)):
       self.dimensions[i] = (pos2[i] - pos1[i]) * scale
 
+    # Setup Shadow
+    shadow = CardMaker("Player_" + str(self.id) + "_Shadow")
+    shadow.setFrame(-1.25,1.25,-1.25,1.25)
+    shadow.setColor(1,1,1,1)
+    shadow_node = self.actor.attachNewNode(shadow.generate())
+    shadow_node.setTransparency(TransparencyAttrib.MAlpha)   
+    shadow_node.setZ(-2.2)
+    shadow_node.setP(-90)
+
+    shadow_tex = loader.loadTexture(base.assetPath + "/characters/shadow.png")
+    shadow_node.setTexture(shadow_tex)
+
     # Setup ODE
 
     self.ode_body = OdeBody(base.ode_world)
@@ -111,9 +123,10 @@ class player:
     self.isNoReduce = False
     self.local = local
     self.doMovementLock = False
+    self.isDead = False
 
     # Set Start Position
-    self.startPos = base.playerStart[self.id - 1]
+    self.startPos = base.playerStart[ (self.id % len(base.playerStart)) - 1]
     self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 20.0 )
 
     # Stats
@@ -253,10 +266,6 @@ class player:
                   else:
                     if vel[x] > 0:
                       vel[x] = -1.0
-                    
-
-        
-              
 
             # Fall off the side
             if pos[2] < -10:
@@ -282,6 +291,8 @@ class player:
               if i.noCollide == self or self.noCollide == i: continue
 
               if self.colWithNode(i.actor, i.dimensions):
+
+                if self.local: self.networkPosition()
 
                 # Get Bump Power
                 myPower = self.getBumpPower(i.resist)
@@ -325,14 +336,14 @@ class player:
                       eneForce[x] = 50000
                       i.moveSpecial = False
 
-                if not i.moveSpecial:
-                  
+                if not i.moveSpecial:          
 
                   i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
                   i.ode_body.setForce(eneForce[0], eneForce[1], eneForce[2])
 
                   if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
                     i.reduceResist()
+                    i.knockback()
 
                 if not self.moveSpecial:
 
@@ -340,6 +351,7 @@ class player:
                 
                   if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
                     self.reduceResist()
+                    self.knockback()
 
                     # Play stars particle effect
                     self.particlePlay('stars', .5)
@@ -384,7 +396,7 @@ class player:
         self.actor.setH(self.actor.getH() - 180)          
 
       # If knocked back by another force...
-      elif (vel[0] > 0 and self.direction[0] < 0) or (vel[0] < 0 and self.direction[0] > 0) or (vel[1] < 0 and self.direction[1] > 0) or (vel[1] > 0 and self.direction[1] < 0):
+      elif self.isKnockback:
         self.setAnim("bump", True)
       
       # If moved by player the animation
@@ -409,12 +421,16 @@ class player:
     return task.cont
 
 
-  def knockback(self, task):
+  def knockback(self, task = None):
 
     """
     To use after a knockback. Restores controls of player
     once the players comes to a stop.
     """
+
+    if not task:
+      taskMgr.add(self.knockback, "Player_" + str(self.id) + "_Knockback")
+      return None    
 
     vel = self.ode_body.getLinearVel()
 
@@ -756,10 +772,19 @@ class player:
     taskMgr.doMethodLater(time, p.softStop, "Player_" + str(self.id) + "_StarsParticleStop", extraArgs=[])
     taskMgr.doMethodLater(time * 2.5, p.cleanup, "Player_" + str(self.id) + "_StarsParticleCleanup", extraArgs=[])    
 
-  def networkPosition(self, task):
+  def networkPosition(self, task = None):
 
     pos = self.actor.getPos()
     h = self.actor.getH()
     messenger.send("network-send", ["position", chr(int(self.controls)) + str(pos[0]) + "x" + str(pos[1]) + "x" + str(pos[2]) + "x" + str(h)])
 
-    return task.again
+    if task:
+      return task.again
+
+  def destroy(self):
+
+    taskMgr.removeTasksMatching("Player_" + str(self.id) + "*")
+    if self.local: base.gameCam.remove(self)
+    base.players.remove(self)
+    self.actor.cleanup()
+    self.actor.removeNode()
