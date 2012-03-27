@@ -32,7 +32,7 @@ mybuffer = base.win.makeTextureBuffer('HDScreenShotBuff',width,height,tex,True)
 cam=Camera('SnapshotCam') 
 
 lens = OrthographicLens()
-lens.setFilmSize(2.5, 15)
+lens.setFilmSize(7.0, 15)
 
 cam.setLens(lens) 
 cam.getLens().setAspectRatio(width/height) 
@@ -40,7 +40,7 @@ cam.getLens().setAspectRatio(width/height)
 pCam=NodePath(cam) 
   
 mycamera = base.makeCamera(mybuffer,useCamera=pCam)
-mycamera.setX(0)    
+mycamera.setX(15)    
 mycamera.setZ(0)
 mycamera.setY(-15) 
 

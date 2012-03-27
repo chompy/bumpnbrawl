@@ -75,6 +75,8 @@ class player:
     for i in range(len(pos1)):
       self.dimensions[i] = (pos2[i] - pos1[i]) * scale
 
+    self.dimensions = [1.6,0.5,1.0]
+
     # Setup Shadow
     shadow = CardMaker("Player_" + str(self.id) + "_Shadow")
     shadow.setFrame(-1.25,1.25,-1.25,1.25)
@@ -86,6 +88,8 @@ class player:
 
     shadow_tex = loader.loadTexture(base.assetPath + "/characters/shadow.png")
     shadow_node.setTexture(shadow_tex)
+    shadow_node.setScale(.5 / self.actor.getScale()[0])
+    shadow_node.hide()
 
     # Setup ODE
 
@@ -290,9 +294,10 @@ class player:
               if i == self: continue
               if i.noCollide == self or self.noCollide == i: continue
 
-              if self.colWithNode(i.actor, i.dimensions):
+              tPos = i.actor.getPos()
+              myPos = self.actor.getPos()
 
-                if self.local: self.networkPosition()
+              if self.colWithNode(i.actor, i.dimensions):
 
                 # Get Bump Power
                 myPower = self.getBumpPower(i.resist)
