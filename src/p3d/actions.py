@@ -249,7 +249,7 @@ class actions:
       if i == self.player: continue
       if i.colWithBox(self.thrownObj.getPos(), (2.0, 2.0, 2.0)):
         i.moveVal = [self.thrownDir[0], self.thrownDir[1]]
-        power = (self.player.power * 1.05) - i.resist
+        power = (self.player.power * 2.0) - i.resist
         if power < 0.0: power = 0.0        
         i.ode_body.setLinearVel(self.thrownDir[0] * (power), self.thrownDir[1] * (power), 0)
         i.isMove = [False, False]

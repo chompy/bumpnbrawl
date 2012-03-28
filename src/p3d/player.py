@@ -75,21 +75,21 @@ class player:
     for i in range(len(pos1)):
       self.dimensions[i] = (pos2[i] - pos1[i]) * scale
 
-    self.dimensions = [1.6,0.5,1.0]
+    self.dimensions = [1.6,1.0,1.0]
 
     # Setup Shadow
     shadow = CardMaker("Player_" + str(self.id) + "_Shadow")
     shadow.setFrame(-1.25,1.25,-1.25,1.25)
     shadow.setColor(1,1,1,1)
-    shadow_node = self.actor.attachNewNode(shadow.generate())
+    shadow_node = render.attachNewNode(shadow.generate())
     shadow_node.setTransparency(TransparencyAttrib.MAlpha)   
-    shadow_node.setZ(-2.2)
+    shadow_node.setPos(self.actor.getPos())
     shadow_node.setP(-90)
 
     shadow_tex = loader.loadTexture(base.assetPath + "/characters/shadow.png")
     shadow_node.setTexture(shadow_tex)
-    shadow_node.setScale(.5 / self.actor.getScale()[0])
-    shadow_node.hide()
+    shadow_node.setScale(.5)
+    self.shadow_node = shadow_node
 
     # Setup ODE
 
@@ -134,10 +134,19 @@ class player:
     self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 20.0 )
 
     # Stats
-    self.accelerate = 20000
-    self.moveSpeed = 5.0
-    self.power = 20.0
-    self.resist = 15.0
+    self.accelerate = 50000
+
+    # Load stats from external file...
+    if os.path.exists(base.assetPath + "/characters/" + character + "/stats.txt"): 
+      statFile = open(base.assetPath + "/characters/" + character + "/stats.txt").read().split("\n")
+      self.moveSpeed = float(statFile[0].split(" ")[0])
+      self.power = float(statFile[1].split(" ")[0])
+      self.resist = float(statFile[2].split(" ")[0])      
+
+    else:
+      self.moveSpeed = 15.0
+      self.power = 10.0
+      self.resist = 5.0
 
     # Keyboard Interface
     self.controls = str(controls)
@@ -259,8 +268,11 @@ class player:
               if i['pos'][0] == tilePos[0] and i['pos'][1] == tilePos[1] and i['pos'][2] == tilePos[2] - 1:
                 vel[2] = .08
                 self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
+                self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - self.dimensions[2] )
               
               elif self.colWithTile(i['pos'] * 2.0):
+
+                if not i['id'] == 2 and self.noCollide == 1: continue
 
                 for x in range(len(self.moveVal)):
                   if (i['pos'][x] * 2.0) - pos[x] < 0:                     
@@ -292,7 +304,7 @@ class player:
 
             for i in base.players:
               if i == self: continue
-              if i.noCollide == self or self.noCollide == i: continue
+              if i.noCollide == 1 or self.noCollide == 1 or i.noCollide == self or self.noCollide == i: continue
 
               tPos = i.actor.getPos()
               myPos = self.actor.getPos()
@@ -421,6 +433,21 @@ class player:
         self.setAnim(self.animDefault, True)
   
 
+      # Shadow Node
+      self.shadow_node.setFluidX(self.actor.getX())
+      self.shadow_node.setFluidY(self.actor.getY())
+
+      azPos = self.actor.getZ()
+      szPos = self.shadow_node.getZ()
+
+      posDelta = azPos - szPos
+      if posDelta >= self.dimensions[2]:
+        self.shadow_node.show()
+        self.shadow_node.setScale(.5 / (abs(posDelta) ))
+      else:
+        self.shadow_node.hide()
+      
+
       task.lastTime = task.time
       
     return task.cont
@@ -545,7 +572,7 @@ class player:
     else:
       self.noCollide = None   
 
-  def setAnim(self, name, loop):
+  def setAnim(self, name, loop, startFrom = 0, endAt = None):
 
     """
     Set animation.
@@ -560,11 +587,10 @@ class player:
       self.animConfig[name]['end'] = self.actor.getNumFrames(name)
       self.animConfig[name]['loopfrom'] = 0
       self.animConfig[name]['loopto'] = self.actor.getNumFrames(name)
-
       
     # Play one time animation.
     if not loop:
-      self.actor.play(name)
+      self.actor.play(name, fromFrame = startFrom, toFrame = endAt)
       self.isPlaying = True
       self.animation = name
       taskMgr.remove("Player_" + str(self.id) + "_AnimationDoneCheck")
@@ -580,7 +606,7 @@ class player:
 
     if not self.isPlaying:
       self.animation = name
-      self.actor.loop(self.animation, restart = 0, fromFrame = self.animConfig[name]['loopfrom'], toFrame = self.animConfig[name]['loopto'] - 2)
+      self.actor.loop(self.animation, restart = 0, fromFrame = self.animConfig[name]['loopfrom'], toFrame = self.animConfig[name]['loopto'] )
       return True
       
     return False
@@ -692,7 +718,7 @@ class player:
     self.moveVal = self.direction
     self.moveSpecial = isSpecial
     self.isMove = [False, False]
-    #self.direction = [self.moveVal[0], self.moveVal[1]]
+    self.direction = [self.moveVal[0], self.moveVal[1]]
 
     if not canControl:
       self.isKnockback = True
