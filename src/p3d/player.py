@@ -134,7 +134,7 @@ class player:
     self.ode_body.setPosition(self.startPos[0], self.startPos[1], self.startPos[2] + 20.0 )
 
     # Stats
-    self.accelerate = 50000
+    self.accelerate = 100000
 
     # Load stats from external file...
     if os.path.exists(base.assetPath + "/characters/" + character + "/stats.txt"): 
@@ -420,11 +420,11 @@ class player:
       elif self.isMove[0] or self.isMove[1]:
       
         # Animation speed...
-        #speed = vel[0]
-        #if abs(vel[1]) > abs(vel[0]): speed = vel[1]
-        #speed = abs(speed / self.moveSpeed)
-        #if speed < .5: speed = .5
-        #self.actor.setPlayRate( speed, self.animMove)
+        speed = vel[0]
+        if abs(vel[1]) > abs(vel[0]): speed = vel[1]
+        speed = abs(speed / self.moveSpeed)
+        if speed < .5: speed = .5
+        self.actor.setPlayRate( .5 + speed, self.animMove)
         
         self.setAnim(self.animMove, True)
             
