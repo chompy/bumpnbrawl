@@ -144,7 +144,7 @@ class player:
       self.resist = float(statFile[2].split(" ")[0])      
 
     else:
-      self.moveSpeed = 15.0
+      self.moveSpeed = 5.0
       self.power = 10.0
       self.resist = 5.0
 
@@ -819,3 +819,4 @@ class player:
     base.players.remove(self)
     self.actor.cleanup()
     self.actor.removeNode()
+    self.shadow_node.removeNode()

@@ -55,7 +55,7 @@ class actions:
         x['solid'] = 0
         self.pickupObj = x['node']
         self.pickupObjIsPlayer = False
-        self.player.moveSpeed = self.origMoveSpeed / 2.0
+        self.player.moveSpeed = self.origMoveSpeed / 1.5
         break
 
 

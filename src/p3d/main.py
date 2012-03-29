@@ -3,11 +3,14 @@ from pandac.PandaModules import loadPrcFileData, VBase4, AntialiasAttrib, TextNo
 from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 
-# Import game specific modules
-import mapLoader, player, camera, hud, gameInput, network
+# Python Modules
+import sys
 
 # Config
 loadPrcFile("../../assets/Config.prc")
+
+# Import game specific modules
+import mapLoader, player, camera, hud, gameInput, network
 
 # ShowBase
 import direct.directbase.DirectStart
@@ -62,6 +65,12 @@ CONTROL2 = {
   'btn2'    :   'e'
 }
 
+# TEMP - Get character from command line
+if len(sys.argv) > 1:
+  character = sys.argv[1]
+else:
+  character = "chompy"
+
 class ChompinBomper(ShowBase):
 
   def __init__(self):
@@ -79,14 +88,14 @@ class ChompinBomper(ShowBase):
     # Load Players
     base.playerid = 0
     base.players = []
-    base.players.append(player.player("renoki", True, 2))
-    base.players.append(player.player("chompy", True, 1))
+    base.players.append(player.player(character, True, 1))
+    #base.players.append(player.player("chompy", True, 1))
     #base.players.append(player.player("chompy", False))
     #base.players.append(player.player("chompy", False))   
 
     # Load Camera
     base.gameCam = camera.camera(base.players[0])
-    base.gameCam.add(base.players[1])
+    #base.gameCam.add(base.players[1])
 
     # Game Hud
     self.hud = hud.gameHud()
