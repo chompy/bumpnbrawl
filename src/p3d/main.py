@@ -1,5 +1,5 @@
 # Import Panda3D Modules
-from pandac.PandaModules import loadPrcFileData, VBase4, AntialiasAttrib, TextNode, OdeWorld, OdeSimpleSpace, OdeJointGroup, PointLight, Spotlight, PerspectiveLens, Vec4, AmbientLight
+from pandac.PandaModules import loadPrcFileData, VBase4, AntialiasAttrib, TextNode, OdeWorld, OdeSimpleSpace, OdeJointGroup, PointLight, Spotlight, PerspectiveLens, Vec4, AmbientLight, DirectionalLight
 from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 
@@ -71,6 +71,25 @@ if len(sys.argv) > 1:
 else:
   character = "chompy"
 
+# Add some Lights
+
+alight = AmbientLight('alight')
+alight.setColor(VBase4(1, 1, 1, 1))
+alnp = render.attachNewNode(alight)
+render.setLight(alnp)
+
+dlight = DirectionalLight('dlight')
+dlight.setColor(VBase4(1, 1, 1, 1))
+dlnp = render.attachNewNode(dlight)
+dlnp.setHpr(0, 0, 0)
+render.setLight(dlnp)
+
+dlight = DirectionalLight('dlight')
+dlight.setColor(VBase4(1, 1, 1, 1))
+dlnp = render.attachNewNode(dlight)
+dlnp.setHpr(0, -90, 0)
+render.setLight(dlnp)
+
 class ChompinBomper(ShowBase):
 
   def __init__(self):
@@ -89,7 +108,7 @@ class ChompinBomper(ShowBase):
     base.playerid = 0
     base.players = []
     base.players.append(player.player(character, True, 1))
-    #base.players.append(player.player("chompy", True, 1))
+    base.players.append(player.player("renoki", True, 2))
     #base.players.append(player.player("chompy", False))
     #base.players.append(player.player("chompy", False))   
 

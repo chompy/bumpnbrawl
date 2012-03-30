@@ -1,7 +1,10 @@
 framebuffer-multisample 1
-multisamples 2
+multisamples 8
 sync-video #t
 show-frame-rate-meter #t
+win-size 1280 720
+#clock-mode limited 
+#clock-frame-rate 30
 p1_up arrow_up
 p1_btna shift
 p1_btnb z
