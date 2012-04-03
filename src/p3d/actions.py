@@ -82,6 +82,11 @@ class actions:
           self.pickupObj = x.actor
           x.isHeld = True
           self.player.moveSpeed = self.player.moveSpeed / 2.0
+
+          # Hide pick up player's shadow
+          self.pickupObjPlayer.shadow_node.hide()
+
+          self.pickupObjPlayer.setAnim("bump", 1)
           break
 
     if not self.pickupObj: return None
@@ -127,19 +132,7 @@ class actions:
     """
     Drop object that player is currently carrying.
     """
-
-    # Determine if there is a tile in front of the player.
-    # We can't throw stuff past walls so.
-    tilePos = self.player.getTilePos()
-    tilePos2 = self.player.getTilePos()
-    for i in range(len(self.player.direction)):
-      tilePos[i] += self.player.direction[i]
-      tilePos2[i] += self.player.direction[i] * 2.0
-
-    for x in base.tilePositions:
-      if not x['solid']: continue
-      if tilePos == x['pos']: return None
-      if tilePos2 == x['pos']: return None      
+ 
 
     # Set player speed back to original.
     self.player.moveSpeed = self.origMoveSpeed
@@ -219,6 +212,9 @@ class actions:
         self.pickupObjPlayer.ode_body.setLinearVel(self.thrownDir[0] * (power * 1.25), self.thrownDir[1] * (power * 1.25), 3.5)
         self.pickupObjPlayer.isMove = [False, False]
 
+        # Show pick up player's shadow
+        self.pickupObjPlayer.shadow_node.show()
+
         self.player.setNoCollide(.5, self.pickupObjPlayer)
         self.pickupObjPlayer.setNoCollide(.5, self.player)
       
@@ -249,7 +245,7 @@ class actions:
       if i == self.player: continue
       if i.colWithBox(self.thrownObj.getPos(), (2.0, 2.0, 2.0)):
         i.moveVal = [self.thrownDir[0], self.thrownDir[1]]
-        power = (self.player.power * 2.0) - i.resist
+        power = (self.player.power * 1.25) - (i.resist / 1.75)
         if power < 0.0: power = 0.0        
         i.ode_body.setLinearVel(self.thrownDir[0] * (power), self.thrownDir[1] * (power), 0)
         i.isMove = [False, False]
@@ -264,6 +260,10 @@ class actions:
         if not self.pickupObjIsPlayer:
           taskMgr.remove("Player_" + str(self.player.id) + "_Action_FadePickup")
           self.removePickup(self.thrownObj)
+
+        # Play Sound
+        self.player.sfx['destructable'].play()
+          
         self.thrownObj = None
 
         i.particlePlay('stars', .5)
@@ -279,8 +279,12 @@ class actions:
         self.thrownObj.setPos(pos)
         self.thrownObj.setZ((i['pos'][2] * 2.0) + 2.0)
         if not self.pickupObjIsPlayer:
-          taskMgr.remove("Player_" + str(self.player.id) + "_Action_FadePickup")
-          self.removePickup(self.thrownObj)
+          taskMgr.remove("Player_" + str(self.player.id) + "_Action_FadePickup")         
+          self.removePickup(self.thrownObj)        
+            
+        # Play Sound
+        self.player.sfx['destructable'].play()
+          
         self.thrownObj = None
         return task.done
 

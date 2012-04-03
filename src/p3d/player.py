@@ -6,6 +6,9 @@ from lib import basePolling
 import math,random, os, specials, ConfigParser
 from pandac.PandaModules import OdeWorld, OdeBody, OdeMass, Quat
 
+# Load Sounds
+from direct.showbase import Audio3DManager
+
 GRAVITY = .5
 
 class player:
@@ -76,6 +79,18 @@ class player:
       self.dimensions[i] = (pos2[i] - pos1[i]) * scale
 
     self.dimensions = [1.6,1.0,1.0]
+
+    # Load 3D Sounds
+    self.audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0], camera)
+    self.sfx = {
+      'bump'            :   self.audio3d.loadSfx(base.assetPath + "/sfx/bump.wav"),
+      'special'         :   self.audio3d.loadSfx(base.assetPath + "/sfx/special.wav"),
+      'lunge'           :   self.audio3d.loadSfx(base.assetPath + "/sfx/lunge.wav"),
+      'destructable'    :   self.audio3d.loadSfx(base.assetPath + "/sfx/destructable.wav"), 
+    }
+    
+    for i in self.sfx:
+      self.audio3d.attachSoundToObject(self.sfx[i], self.actor)
 
     # Setup Shadow
     shadow = CardMaker("Player_" + str(self.id) + "_Shadow")
@@ -268,7 +283,7 @@ class player:
               if i['pos'][0] == tilePos[0] and i['pos'][1] == tilePos[1] and i['pos'][2] == tilePos[2] - 1:
                 vel[2] = .08
                 self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
-                self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - self.dimensions[2] )
+                self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - 1.0 )
               
               elif self.colWithTile(i['pos'] * 2.0):
 
@@ -361,6 +376,7 @@ class player:
                   if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
                     i.reduceResist()
                     i.knockback()
+                    i.sfx['bump'].play()
 
                 if not self.moveSpecial:
 
@@ -369,6 +385,8 @@ class player:
                   if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
                     self.reduceResist()
                     self.knockback()
+
+                    self.sfx['bump'].play()
 
                     # Play stars particle effect
                     self.particlePlay('stars', .5)
@@ -723,6 +741,10 @@ class player:
     if not canControl:
       self.isKnockback = True
       taskMgr.add(self.knockback, "Player_" + str(self.id) + "_Knockback")
+
+    # Play Sound
+    if movement > 10:
+      self.sfx['lunge'].play()
 
   def setSpecialCooldown(self, done = False):
 

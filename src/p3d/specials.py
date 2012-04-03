@@ -19,6 +19,9 @@ class specials(actions.actions):
       # If special is cooling down.
       if self.player.specialCooldown: return None
 
+      # Play activate sound
+      self.player.sfx['special'].play()
+
       if abs(self.player.movement[0]) < 4.5 and abs(self.player.movement[1]) < 4.5:
         self.player.moveLock(None, .5)
         self.player.setAnim("special", 0)        
@@ -44,6 +47,9 @@ class specials(actions.actions):
 
       # If special is cooling down.
       if self.player.specialCooldown: return None
+
+      # Play activate sound
+      self.player.sfx['special'].play()
 
       self.player.moveLock(None, .25)
       self.player.setAnim("special", 0, 0, 20)      

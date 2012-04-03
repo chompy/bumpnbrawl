@@ -61,7 +61,6 @@ class camera:
       pos[2] = 30
       pos[1] -= 32
       base.camera.setFluidPos(pos)      
-      return task.cont
 
     # Greater tne one player.
     else:
@@ -94,9 +93,14 @@ class camera:
         
       camPos[1] -= 30 + (distance * .75)
       base.camera.setFluidPos(camPos)
-          
-    
 
-    
+    # Position Background to follow cam
+    if base.background:
+      try:
+        base.background.setFluidX(base.camera.getX())
+        base.background.setFluidY(base.camera.getY() + 35)
+      except: base.background = None
+
+      
     return task.cont
 

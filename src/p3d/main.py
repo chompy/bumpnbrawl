@@ -8,6 +8,8 @@ import sys
 
 # Config
 loadPrcFile("../../assets/Config.prc")
+loadPrcFileData('', 'audio-library-name p3openal_audio')
+
 
 # Import game specific modules
 import mapLoader, player, camera, hud, gameInput, network
@@ -15,6 +17,9 @@ import mapLoader, player, camera, hud, gameInput, network
 # ShowBase
 import direct.directbase.DirectStart
 from direct.showbase.ShowBase import ShowBase
+
+# Background
+base.background = None
 
 # Antialiasing
 render.setAntialias(AntialiasAttrib.MAuto)

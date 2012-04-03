@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw
 from panda3d.core import NodePath, Texture
-from pandac.PandaModules import Fog
+from pandac.PandaModules import Fog, CardMaker
 import ConfigParser, os, math
 
 class mapLoader:
@@ -47,6 +47,21 @@ class mapLoader:
     """
     Open the map file and load it up.
     """
+
+    # Load Background
+    if os.path.exists(base.assetPath + "/tiles/themes/" + self.theme + "/background.png"):
+      backgroundTex = loader.loadTexture(base.assetPath + "/tiles/themes/" + self.theme + "/background.png")
+
+      bg = CardMaker("Map_Background")
+      bg.setFrame(-6,6,-3, 3)
+      bg_node = self.node.attachNewNode(bg.generate())
+      bg_node.setTexture(backgroundTex)
+      bg_node.setBillboardPointWorld()
+      bg_node.setZ(-20)
+      bg_node.setScale(12)
+
+      base.background = bg_node   
+      
 
     # Make an array of possible player start points.
     base.playerStart = []
