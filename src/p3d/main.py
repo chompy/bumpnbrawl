@@ -119,7 +119,7 @@ class ChompinBomper(ShowBase):
 
     # Load Camera
     base.gameCam = camera.camera(base.players[0])
-    #base.gameCam.add(base.players[1])
+    base.gameCam.add(base.players[1])
 
     # Game Hud
     self.hud = hud.gameHud()

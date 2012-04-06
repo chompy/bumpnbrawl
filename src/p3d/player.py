@@ -1,5 +1,5 @@
 from direct.actor.Actor import Actor
-from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib, CardMaker, TextureStage
+from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib, CardMaker, TextureStage, Vec3
 from direct.particles.ParticleEffect import ParticleEffect
 from direct.interval.LerpInterval import LerpColorScaleInterval
 from lib import basePolling
@@ -64,6 +64,11 @@ class player:
     if os.path.exists(base.assetPath + "/characters/" + character + "/scale.txt"):
       scale = float(open(base.assetPath + "/characters/" + character + "/scale.txt").read())
     self.actor.setScale(scale)
+
+    # Z Offset
+    self.zOffset = 0
+    if os.path.exists(base.assetPath + "/characters/" + character + "/zoffset.txt"):
+      self.zOffset = float(open(base.assetPath + "/characters/" + character + "/zoffset.txt").read()) 
 
     # Load Texture
     skin = "default"
@@ -406,7 +411,9 @@ class player:
       self.ode_body.setLinearVel(vel[0], vel[1], vel[2])
       self.ode_body.setForce(force[0], force[1], force[2])
 
-      self.actor.setFluidPos(render, self.ode_body.getPosition())
+      odePos = self.ode_body.getPosition()
+      odePos[2] += self.zOffset
+      self.actor.setFluidPos(render, odePos)
 
       # Set Rotation [Direction]
 
@@ -458,7 +465,7 @@ class player:
       azPos = self.actor.getZ()
       szPos = self.shadow_node.getZ()
 
-      posDelta = azPos - szPos
+      posDelta = (azPos - self.zOffset) - szPos
       if posDelta >= self.dimensions[2]:
         self.shadow_node.show()
         self.shadow_node.setScale(.5 / (abs(posDelta) ))
@@ -814,7 +821,7 @@ class player:
 
     return self.snapshot
 
-  def particlePlay(self, name, time):
+  def particlePlay(self, name, time, doReturn = False):
 
     """
     Play a particle effect for a period of time.
@@ -824,6 +831,9 @@ class player:
     p.start(self.actor, render)
     taskMgr.doMethodLater(time, p.softStop, "Player_" + str(self.id) + "_StarsParticleStop", extraArgs=[])
     taskMgr.doMethodLater(time * 2.5, p.cleanup, "Player_" + str(self.id) + "_StarsParticleCleanup", extraArgs=[])    
+
+    if doReturn:
+      return p
 
   def networkPosition(self, task = None):
 

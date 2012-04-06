@@ -1,5 +1,6 @@
 import actions
 from direct.interval.LerpInterval import LerpColorScaleInterval
+from pandac.PandaModules import Vec3
 
 class specials(actions.actions):
 
@@ -62,14 +63,16 @@ class specials(actions.actions):
       
       return None
     else:
+        
+      p = self.player.particlePlay("speed", 1.25, True)
 
       if self.player.direction[0] and not self.player.direction[1]:
-        self.player.particlePlay("speed-left", 1.25)
-      elif self.player.direction[1] and not self.player.direction[0]:
-        self.player.particlePlay("speed-up", 1.25)
-      else:
-        self.player.particlePlay("speed-diag", 1.25)
-        
+        p.getParticlesList()[0].renderer.setNonanimatedTheta(90.0)
+      elif self.player.direction[0] > 0 and self.player.direction[1]:
+        p.getParticlesList()[0].renderer.setNonanimatedTheta(-45.0)
+      elif self.player.direction[0] < 0 and self.player.direction[1]:
+        p.getParticlesList()[0].renderer.setNonanimatedTheta(45.0)
+                
       self.player.isKnockback = False
       self.player.setMovement(20.0, True, False)
       self.player.noCollide = 1
@@ -83,5 +86,55 @@ class specials(actions.actions):
     lerp.start()    
     self.player.setAnim("special", 0, 20, None) 
     self.player.noCollide = None
-      
+
+
+  def hawk_special(self, task = None):
+
+    """
+    Hawk's special ability. A Super punch.
+    """      
+
+    if not task:
+
+      # If special is cooling down.
+      if self.player.specialCooldown: return None
+
+      # Play activate sound
+      self.player.sfx['special'].play()
+
+      self.player.moveLock(None, 1.5)
+      self.player.setAnim("special", 0, 0, 50)      
+      self.player.particlePlay("powerup", .25)   
+
+      taskMgr.doMethodLater(1.35, self.hawk_special, "Player_" + str(self.player.id) + "_Action_Special")  
+
+    else:
+
+      p = self.player.particlePlay("punch", .5, True)
+      p.getParticlesList()[0].emitter.setOffsetForce(Vec3(self.player.direction[0] * 4.0, self.player.direction[1] * 4.0, 0.0000))
+
+      self.player.setSpecialCooldown()
+
+      hitRange = 3
+     
+      for i in base.players:
+        if i == self.player: continue
+        tilePos = i.getTilePos()          
+        for x in range(0, hitRange):
+          myTile = self.player.getTilePos()
+          for y in range(len(self.player.direction)):
+            myTile[y] += float(x) * self.player.direction[y]
+ 
+          if myTile == tilePos:
+
+            power = (self.player.power * 2.0) - (i.resist * 1.5)
+
+            i.ode_body.setLinearVel(self.player.direction[0] * power, self.player.direction[1] * power, 0)
+            i.reduceResist()
+            
+            break
+
+        
+
+      return task.done
 
