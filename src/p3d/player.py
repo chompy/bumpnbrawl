@@ -162,9 +162,9 @@ class player:
     # Load stats from external file...
     if os.path.exists(base.assetPath + "/characters/" + character + "/stats.txt"): 
       statFile = open(base.assetPath + "/characters/" + character + "/stats.txt").read().split("\n")
-      self.moveSpeed = float(statFile[0].split(" ")[0])
-      self.power = float(statFile[1].split(" ")[0])
-      self.resist = float(statFile[2].split(" ")[0])      
+      self.moveSpeed = 5.0 + ( float(statFile[0].split(" ")[0]) * 2.5)
+      self.power = 5.0 + (float(statFile[1].split(" ")[0]) * 5.0)
+      self.resist = 5.0 + (float(statFile[2].split(" ")[0]) * 5.0)
 
     else:
       self.moveSpeed = 5.0
@@ -266,7 +266,7 @@ class player:
 
             # If was not previously moving... 
             # Show the dash cloud!
-            if not self.isMove[0] and not self.isMove[1] and self.showDashCloud:
+            if not self.isMove[0] and not self.isMove[1] and self.showDashCloud and self.isOnGround:
 
               dpos = self.actor.getPos()
               dpos[2] -= (self.dimensions[2] / 2.0)
@@ -434,7 +434,7 @@ class player:
                       eneForce[x] = -50000
                       i.moveSpecial = False
                     
-                  else:
+                  elif oPos[x] - pos[x] > 0:
                     force[x] = -40000
                     eneForce[x] = 40000
 
@@ -450,18 +450,23 @@ class player:
                       eneForce[x] = 50000
                       i.moveSpecial = False
 
+
+                # Causes players to stop if they are doing a special attack...also causes resistance to lower from bumps
                 if not i.moveSpecial:          
 
                   i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
-                  i.ode_body.setForce(eneForce[0], eneForce[1], eneForce[2])
 
                   if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
                     i.reduceResist()
                     i.knockback()
                     i.sfx['bump'].play()
 
+                    # Play stars particle effect
+                    i.particlePlay('stars', .5)
+
                 if not self.moveSpecial:
 
+                  self.ode_body.setLinearVel(vel[0], vel[1], vel[2])
                   velTest = i.ode_body.getLinearVel()
                 
                   if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
@@ -472,14 +477,15 @@ class player:
 
                     # Play stars particle effect
                     self.particlePlay('stars', .5)
-
-
+                   
+                # Drop pickups...
                 for x in range(len(myPower)):
                   if abs(enePower[x]) >= 5.05:
                     self.actions.drop(.5)
                   if abs(myPower[x]) >= 5.05:
                     i.actions.drop(.5)
 
+                # Don't collide with player again.
                 self.setNoCollide(.25, i)
                 i.setNoCollide(.25, self)
 

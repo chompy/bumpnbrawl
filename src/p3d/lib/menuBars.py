@@ -16,7 +16,7 @@ class menuBars(DirectObject):
     self.node.reparentTo(aspect2d)
 
     # Load Fonts
-    self.barFont = loader.loadFont(base.assetPath + "/fonts/badaboombb.ttf")    
+    self.barFont = loader.loadFont(base.assetPath + "/fonts/DejaVuSansBold.ttf")    
     self.barFont.setPixelsPerUnit(60)
 
     # Load Menubar Texture

@@ -62,7 +62,7 @@ class camera:
       pos[1] -= 32
       base.camera.setFluidPos(pos)      
 
-    # Greater tne one player.
+    # Greater than one player.
     else:
       for x in self.players:
         for i in range(len(centerPoint)):

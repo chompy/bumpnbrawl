@@ -41,8 +41,9 @@ class actions:
 
     pos = self.player.actor.getPos()
     tilepos = self.player.getTilePos()
-    tilepos[0] += self.player.direction[0]
-    tilepos[1] += self.player.direction[1]
+    tilepos2 = self.player.getTilePos()    
+    tilepos2[0] += self.player.direction[0]
+    tilepos2[1] += self.player.direction[1]
 
     if not self.player.moveVal == [0,0]:
       return None
@@ -51,7 +52,7 @@ class actions:
     for x in base.tilePositions:
       if not x['pickup']: continue
       if not x['solid']: continue
-      if tilepos == x['pos']:
+      if tilepos == x['pos'] or tilepos2 == x['pos']:
         x['solid'] = 0
         self.pickupObj = x['node']
         self.pickupObjIsPlayer = False
@@ -60,14 +61,14 @@ class actions:
 
 
     for i in range(3):
-      testPos = tilepos
+      testPos = tilepos2
       for x in range(len(self.player.direction)):
         if self.player.direction[x] == 0:
           testPos[x] += (i)
           
       for x in base.players:
         if x == self.player: continue
-        if x.getTilePos() == testPos:
+        if x.getTilePos() == testPos or x.getTilePos() == tilepos:
 
           # Remove enemy move loop
           taskMgr.remove("Player_" + str(x.id) + "_MoveLoop")
