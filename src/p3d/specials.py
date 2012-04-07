@@ -106,12 +106,10 @@ class specials(actions.actions):
       self.player.setAnim("special", 0, 0, 50)      
       self.player.particlePlay("powerup", .25)   
 
-      taskMgr.doMethodLater(1.35, self.hawk_special, "Player_" + str(self.player.id) + "_Action_Special")  
+      taskMgr.doMethodLater(1.35, self.hawk_special, "Player_" + str(self.player.id) + "_Action_Special")
+      taskMgr.doMethodLater(1.15, self.hawk_punch_play, "Player_" + str(self.player.id) + "_Action_PunchParticles", extraArgs=[])    
 
     else:
-
-      p = self.player.particlePlay("punch", .5, True)
-      p.getParticlesList()[0].emitter.setOffsetForce(Vec3(self.player.direction[0] * 4.0, self.player.direction[1] * 4.0, 0.0000))
 
       self.player.setSpecialCooldown()
 
@@ -138,3 +136,11 @@ class specials(actions.actions):
 
       return task.done
 
+  def hawk_punch_play(self):
+
+    """
+    Play Hawk's punch particle effect.
+    """
+    
+    p = self.player.particlePlay("punch", .5, True)
+    p.getParticlesList()[0].emitter.setOffsetForce(Vec3(self.player.direction[0] * 4.0, self.player.direction[1] * 4.0, 0.0000))  

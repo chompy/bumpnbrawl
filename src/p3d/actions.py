@@ -71,6 +71,7 @@ class actions:
 
           # Remove enemy move loop
           taskMgr.remove("Player_" + str(x.id) + "_MoveLoop")
+          x.isOnGround = False
 
           # Initate break free loop...gives enemy player a chance to break free.
           x.heldBy = self.player
@@ -86,7 +87,7 @@ class actions:
           # Hide pick up player's shadow
           self.pickupObjPlayer.shadow_node.hide()
 
-          self.pickupObjPlayer.setAnim("bump", 1)
+          self.pickupObjPlayer.setAnim("fall", 1)
           break
 
     if not self.pickupObj: return None

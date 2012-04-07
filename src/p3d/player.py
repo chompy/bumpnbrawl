@@ -1,7 +1,8 @@
 from direct.actor.Actor import Actor
 from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib, CardMaker, TextureStage, Vec3
 from direct.particles.ParticleEffect import ParticleEffect
-from direct.interval.LerpInterval import LerpColorScaleInterval
+from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosInterval,LerpScaleInterval
+from direct.interval.IntervalGlobal import *
 from lib import basePolling
 import math,random, os, specials, ConfigParser
 from pandac.PandaModules import OdeWorld, OdeBody, OdeMass, Quat
@@ -86,16 +87,16 @@ class player:
     self.dimensions = [1.6,1.0,1.0]
 
     # Load 3D Sounds
-    self.audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0], camera)
+    #self.audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0], camera)
     self.sfx = {
-      'bump'            :   self.audio3d.loadSfx(base.assetPath + "/sfx/bump.wav"),
-      'special'         :   self.audio3d.loadSfx(base.assetPath + "/sfx/special.wav"),
-      'lunge'           :   self.audio3d.loadSfx(base.assetPath + "/sfx/lunge.wav"),
-      'destructable'    :   self.audio3d.loadSfx(base.assetPath + "/sfx/destructable.wav"), 
+      'bump'            :   base.loader.loadSfx(base.assetPath + "/sfx/bump.wav"),
+      'special'         :   base.loader.loadSfx(base.assetPath + "/sfx/special.wav"),
+      'lunge'           :   base.loader.loadSfx(base.assetPath + "/sfx/lunge.wav"),
+      'destructable'    :   base.loader.loadSfx(base.assetPath + "/sfx/destructable.wav"), 
     }
     
-    for i in self.sfx:
-      self.audio3d.attachSoundToObject(self.sfx[i], self.actor)
+    #for i in self.sfx:
+    #  self.audio3d.attachSoundToObject(self.sfx[i], self.actor)
 
     # Setup Shadow
     shadow = CardMaker("Player_" + str(self.id) + "_Shadow")
@@ -148,6 +149,8 @@ class player:
     self.local = local
     self.doMovementLock = False
     self.isDead = False
+    self.showDashCloud = True
+    self.isOnGround = False
 
     # Set Start Position
     self.startPos = base.playerStart[ (self.id % len(base.playerStart)) - 1]
@@ -208,6 +211,20 @@ class player:
     self.i = basePolling.Interface()
 
     taskMgr.add(self.moveLoop, "Player_" + str(self.id) + "_MoveLoop")   
+
+    # Misc Models
+    self.dash_cloud = loader.loadModel(base.assetPath + "/misc_models/dash_cloud." + base.charExt )
+    self.dash_cloud.reparentTo(render)
+    self.dash_cloud.setTransparency(TransparencyAttrib.MAlpha)
+    self.dash_cloud.hide()
+
+    self.land_cloud = loader.loadModel(base.assetPath + "/misc_models/landing_cloud." + base.charExt )
+    self.land_cloud.reparentTo(render)
+    self.land_cloud.setTransparency(TransparencyAttrib.MAlpha)
+    self.land_cloud.setTwoSided(True)
+    self.land_cloud.hide()
+
+
     
     # Begin Animation
     self.setAnim(self.animDefault, True)
@@ -245,15 +262,52 @@ class player:
       else:
         for i in range(len(self.kbVal)):
           self.moveVal[i] = self.kbVal[i]
-          if self.kbVal[i]: self.isMove[i] = True
-          else: self.isMove[i] = False
+          if self.kbVal[i]:
 
+            # If was not previously moving... 
+            # Show the dash cloud!
+            if not self.isMove[0] and not self.isMove[1] and self.showDashCloud:
+
+              dpos = self.actor.getPos()
+              dpos[2] -= (self.dimensions[2] / 2.0)
+              dEndPos = self.actor.getPos()
+              dEndPos[2] -= (self.dimensions[2] / 2.0)
+              
+              for x in range(len(self.moveVal)):
+                dpos[x] -= self.moveVal[x] * .35
+                dEndPos[x] -= self.moveVal[x] * .5
+
+            
+              self.dash_cloud.setPos(dpos)
+                            
+              self.dash_cloud.lookAt(self.actor)
+              self.dash_cloud.setHpr( (self.dash_cloud.getH() + 90, 0, 0) )
+
+              self.dash_cloud.show()
+              self.dash_cloud.setColorScale((1,1,1,1))
+              self.dash_cloud.setScale(1)
+                
+              lerp = Parallel(
+                LerpPosInterval(self.dash_cloud, .5, dEndPos),
+                LerpColorScaleInterval(self.dash_cloud, .4, (1,1,1,0)),
+                LerpScaleInterval(self.dash_cloud, .5, (1.2,1.2,1.2)) 
+              )
+
+              lerp.start()
+              self.showDashCloud = False
+
+            
+            self.isMove[i] = True
+          else: 
+            self.isMove[i] = False
 
       pos = self.actor.getPos()
 
       # ODE Movement
       vel = self.ode_body.getLinearVel()
       force = [0,0,0]
+
+      if abs(vel[0]) < .25 and abs(vel[1]) < .25: self.showDashCloud = True
 
       for i in range(len(self.moveVal)):
         if self.isMove[i]:
@@ -289,10 +343,33 @@ class player:
                 vel[2] = .08
                 self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
                 self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - 1.0 )
+
+                if not self.isOnGround:
+                
+                  # Show Landing Cloud
+                  dpos = self.actor.getPos()
+                  dpos[2] -= (self.dimensions[2] * 2.0)
+
+                  self.land_cloud.setPos(dpos)
+                  self.land_cloud.show()
+                  self.land_cloud.setScale(1)
+                  self.land_cloud.setTwoSided(True)
+                  self.land_cloud.setColorScale((1,1,1,1))
+
+                  lerp2 = Parallel(
+                    LerpColorScaleInterval(self.land_cloud, .4, (1,1,1,0)),
+                    LerpScaleInterval(self.land_cloud, .5, (3,3,3)) 
+                  )
+
+                  lerp2.start()                  
+
+                self.isOnGround = True
               
               elif self.colWithTile(i['pos'] * 2.0):
 
                 if not i['id'] == 2 and self.noCollide == 1: continue
+
+                self.isOnGround = False  
 
                 for x in range(len(self.moveVal)):
                   if (i['pos'][x] * 2.0) - pos[x] < 0:                     

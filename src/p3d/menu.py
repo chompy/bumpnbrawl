@@ -147,7 +147,7 @@ class mainMenu(FSM):
     self.randChar = Actor(base.assetPath + "/characters/" + character + "/model." + base.charExt,
       {'default' : base.assetPath + "/characters/" + character + "/model-idle." + base.charExt }
     )
-    self.randChar.reparentTo(self.node)
+    #self.randChar.reparentTo(self.node)
     self.randChar.setY(5)
     self.addWindowNode(self.randChar, -1, 1.2)
     self.randChar.setScale(.4)
