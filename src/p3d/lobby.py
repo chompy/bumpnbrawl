@@ -1,5 +1,5 @@
 # Import Panda3D Modules
-import sys, os
+import sys, os, math
 from pandac.PandaModules import loadPrcFileData, TextNode, NodePath, CardMaker,TextureStage, Texture, VBase3, TransparencyAttrib, WindowProperties, TextProperties, TextPropertiesManager
 from direct.actor.Actor import Actor
 from direct.interval.LerpInterval import LerpHprInterval
@@ -62,6 +62,9 @@ for i in charList:
   charData.append(data)
 
 base.playerProfiles = []
+
+# Character Select Col Size
+CHAR_COL_SIZE = 5
 
 class gameLobby(FSM):
 
@@ -141,9 +144,7 @@ class gameLobby(FSM):
     self.addWindowNode(self.charSelect, -1, .3)
     self.charSelect.setZ(.4)
 
-    self.charColSize = 5
-
-    self.charSlots = []
+    base.charSlots = []
     for i in charData:
 
       port = characterPortrait(i['picture'])
@@ -152,11 +153,11 @@ class gameLobby(FSM):
       port.setScale(.125)
       port.setPos((x * .25), 0, (y * -.25))
 
-      self.charSlots.append(port)
+      base.charSlots.append(port)
 
       # Increment
       x += 1
-      if x > self.charColSize:
+      if x > CHAR_COL_SIZE:
         x = 0
         y += 1
 
@@ -176,7 +177,6 @@ class gameLobby(FSM):
       pp.setZ(i * -.25)
 
       self.playerSlots.append(pp)
-
 
 
     # Bind Window Event
@@ -235,10 +235,18 @@ class characterPortrait(NodePath):
     self.bg_selected.setTransparency(TransparencyAttrib.MAlpha)  
     self.bg_selected.hide()  
 
+    self.char_image = char_image
     self.char = OnscreenImage(image = char_image, pos = (0, 0, 0), scale=(.68), parent=self)
 
-    self.text = OnscreenText(text = '3', pos = (.7, -.6), scale = .8, shadow=(.1,.1,.1,.5), fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ARight, parent=self)
-    self.text.hide()
+    self.text = []
+    for i in range(4):
+      x = i % 2
+      y = int(math.floor(i / 2))
+      
+      self.text.append(
+        OnscreenText(text = str(i + 1), pos = ( -.3 + (x * .66), y * -.55), scale = .8, shadow=(.1,.1,.1,.5), fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ACenter, parent=self)
+      )
+      self.text[i].hide()
 
   def select(self):
     self.bg.hide()
@@ -248,12 +256,19 @@ class characterPortrait(NodePath):
     self.bg.show()
     self.bg_selected.hide()
 
-  def setNumber(self, number):
-    self.text.show()
-    self.text.setText(str(number))
+  def setNumber(self, number, show=True):
+
+    if show:
+      self.text[number - 1].show()
+    else:
+      self.text[number - 1].hide()
 
   def hideNumber(self):
     self.text.hide()
+
+  def setImage(self, char_image):
+    self.char_image = char_image
+    self.char.setImage(char_image)
 
 # The Following handles the loading of player profiles...
 base.playerProfileSelector = []
@@ -281,7 +296,7 @@ class playerProfile(NodePath):
     self.profileSelect.hide()
 
     profileText = OnscreenText(text = "profile", pos = (0, .025), scale = .1, fg=(.694,.031,.031,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.profileSelect)
-    self.profileName = OnscreenText(text = "< renoki >", pos = (.25, -.065), scale = .1, fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ACenter, parent=self.profileSelect)    
+    self.profileName = OnscreenText(text = "< guest >", pos = (.25, -.065), scale = .1, fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ACenter, parent=self.profileSelect)    
 
     # Character Select State
     self.charSelect = NodePath("CharacterSelect")
@@ -296,6 +311,8 @@ class playerProfile(NodePath):
     self.charName = OnscreenText(text = "chompy", pos = (0, .045), scale = .04, fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect)   
 
     self.showNextJoinProfile()
+
+    self.charSelected = 0
 
   def showNextJoinProfile(self):
   
@@ -315,7 +332,6 @@ class playerProfile(NodePath):
               isOK = True
               break
 
-
           if not isOK:
             base.accept("p" + str(x + 1) + "_btna", i.selectProfile, [x + 1])
       else:
@@ -332,26 +348,86 @@ class playerProfile(NodePath):
     self.showNextJoinProfile()
 
   def selectProfile(self, playerNo = None):
-    base.accept("p" + str(playerNo) + "_btna", self.selectPlayer)
-    base.accept("p" + str(playerNo) + "_btnb", self.cancelPlayer)    
-    self.state = 1
-    
+    profile = "guest"
+
+    # Set Player Number
     self.player = playerNo
+    self.visibleNumber = 0
+    for i in base.playerProfileSelector:
+      self.visibleNumber += 1 
+      if i == self: break
+
+    # Unselect character slot
+    base.charSlots[self.charSelected].setNumber(self.visibleNumber, False)
+    stillSelected = False
+    for i in base.playerProfileSelector:
+      if i == self: continue
+      if i.charSelected == self.charSelected and i.state == 2: 
+        stillSelected = True
+
+    if not stillSelected:
+      base.charSlots[self.charSelected].unselect()
+          
+    base.accept("p" + str(playerNo) + "_btna", self.selectCharacter, [profile])
+    base.accept("p" + str(playerNo) + "_btnb", self.cancelPlayer)
+
+    base.ignore("p" + str(self.player) + "_left")
+    base.ignore("p" + str(self.player) + "_right")
+    base.ignore("p" + str(self.player) + "_up")
+    base.ignore("p" + str(self.player) + "_down")    
+    
+    self.state = 1
+               
     self.showNextJoinProfile()
 
     self.joinText.hide()
     self.charSelect.hide()
     self.profileSelect.show()        
 
-  def selectPlayer(self):
+  def selectCharacter(self, profile):
+    self.state = 2
 
     base.accept("p" + str(self.player) + "_btnb", self.selectProfile, [self.player])  
+
+    base.accept("p" + str(self.player) + "_left", self.updateCharSelectGrid, [-1])
+    base.accept("p" + str(self.player) + "_right", self.updateCharSelectGrid, [1])
+    base.accept("p" + str(self.player) + "_up", self.updateCharSelectGrid, [-CHAR_COL_SIZE])
+    base.accept("p" + str(self.player) + "_down", self.updateCharSelectGrid, [CHAR_COL_SIZE])
+
+    self.updateCharSelectGrid(0)
   
     self.charSelect.show()
 
     self.joinText.hide()
     self.profileSelect.hide()
-    
+
+  def updateCharSelectGrid(self, select):
+
+    select = self.charSelected + select
+
+    if select > len(base.charSlots) - 1:
+      select = 0
+
+    if select < 0: select = len(base.charSlots) - 1
+      
+
+    stillSelected = False
+    for i in base.playerProfileSelector:
+      if i == self: continue
+      if i.charSelected == self.charSelected and i.state == 2: 
+        stillSelected = True
+
+    if not stillSelected:
+      base.charSlots[self.charSelected].unselect()
+
+    base.charSlots[self.charSelected].setNumber(self.visibleNumber, False)
+    self.charSelected = select
+    base.charSlots[self.charSelected].select()
+    base.charSlots[self.charSelected].setNumber(self.visibleNumber, True)
+
+    self.pPortrait.setImage(charData[self.charSelected]['picture'])
+    self.charName.setText(charData[self.charSelected]['name'].lower())
+
 gameInput.gameInput() 
 m = gameLobby()
 #m.request("Title")

@@ -257,7 +257,7 @@ class player:
     if dt > 0.04:
 
 
-      if self.doMovementLock or self.isKnockback or self.isHeld:
+      if self.doMovementLock or self.isHeld:
         self.isMove = [False, False]
       else:
         for i in range(len(self.kbVal)):
@@ -266,7 +266,7 @@ class player:
 
             # If was not previously moving... 
             # Show the dash cloud!
-            if not self.isMove[0] and not self.isMove[1] and self.showDashCloud and self.isOnGround:
+            if not self.isMove[0] and not self.isMove[1] and self.showDashCloud and self.isOnGround and not self.isKnockback:
 
               dpos = self.actor.getPos()
               dpos[2] -= (self.dimensions[2] / 2.0)
@@ -398,7 +398,6 @@ class player:
 
 
             # ODE Player Collision
-
             for i in base.players:
               if i == self: continue
               if i.noCollide == 1 or self.noCollide == 1 or i.noCollide == self or self.noCollide == i: continue
@@ -406,88 +405,46 @@ class player:
               tPos = i.actor.getPos()
               myPos = self.actor.getPos()
 
+              # If this character collides with another...
               if self.colWithNode(i.actor, i.dimensions):
+ 
+                # Get the velocities of both characters
+                myVel = vel
+                eneVel = i.ode_body.getLinearVel()
 
-                # Get Bump Power
-                myPower = self.getBumpPower(i.resist)
-                enePower = i.getBumpPower(self.resist)
-                
-                eneForce = [0,0,0]
-                eneVel = [0,0,0]
+                # Determine how power and resist should affect this collision
+                myPower = self.power - (i.resist)
+                enePower = i.power - (self.resist)
 
-                # Repel the players so they don't get stuck on each other.
-                oPos = i.actor.getPos()
-                for x in range(len(self.moveVal)):
-                  if oPos[x] - pos[x] < 0:
-                    force[x] = 40000
-                    eneForce[x] = -40000
+                # Set velocities.
+                for x in range(2):
+                  myVel[x] += myPower * self.moveVal[x]
+                  eneVel[x] += enePower * i.moveVal[x]
 
-                    vel[x] = abs(enePower[x])
-                    eneVel[x] = -abs(myPower[x])
+                vel = eneVel
+                i.ode_body.setLinearVel(myVel)
 
-                    if self.moveSpecial:
-                      vel[x] = 0
-                      force[x] = 50000
-                      self.moveSpecial = False
-                    elif i.moveSpecial:
-                      eneVel[x] = 0
-                      eneForce[x] = -50000
-                      i.moveSpecial = False
-                    
-                  elif oPos[x] - pos[x] > 0:
-                    force[x] = -40000
-                    eneForce[x] = 40000
+                # Reduce Reduce
+                if abs(myVel[0]) > 5.0 or abs(myVel[1]) > 5.0:
+                  i.reduceResist()
 
-                    vel[x] = -abs(enePower[x])
-                    eneVel[x] = abs(myPower[x])
+                if abs(eneVel[0]) > 5.0 or abs(eneVel[1]) > 5.0:
+                  self.reduceResist()
 
-                    if self.moveSpecial:
-                      vel[x] = 0
-                      force[x] = -50000
-                      self.moveSpecial = False
-                    elif i.moveSpecial:
-                      eneVel[x] = 0
-                      eneForce[x] = 50000
-                      i.moveSpecial = False
+                # Sound FX
+                self.sfx['bump'].play()
 
+                # Particle FX
+                self.particlePlay('stars', .15)
 
-                # Causes players to stop if they are doing a special attack...also causes resistance to lower from bumps
-                if not i.moveSpecial:          
+                # Knockback
+                self.knockback()
+                i.knockback()                
 
-                  i.ode_body.setLinearVel(eneVel[0], eneVel[1], eneVel[2])
-
-                  if abs(eneVel[0]) >= 4.5 or abs(eneVel[1]) >= 4.5:
-                    i.reduceResist()
-                    i.knockback()
-                    i.sfx['bump'].play()
-
-                    # Play stars particle effect
-                    i.particlePlay('stars', .5)
-
-                if not self.moveSpecial:
-
-                  self.ode_body.setLinearVel(vel[0], vel[1], vel[2])
-                  velTest = i.ode_body.getLinearVel()
-                
-                  if abs(vel[0]) >= 4.5 or abs(vel[1]) >= 4.5:
-                    self.reduceResist()
-                    self.knockback()
-
-                    self.sfx['bump'].play()
-
-                    # Play stars particle effect
-                    self.particlePlay('stars', .5)
-                   
-                # Drop pickups...
-                for x in range(len(myPower)):
-                  if abs(enePower[x]) >= 5.05:
-                    self.actions.drop(.5)
-                  if abs(myPower[x]) >= 5.05:
-                    i.actions.drop(.5)
-
-                # Don't collide with player again.
-                self.setNoCollide(.25, i)
-                i.setNoCollide(.25, self)
+                # Flag characters to not accept collisions from each other for the next .5 seconds
+                self.setNoCollide(.5, i)
+                i.setNoCollide(.5, self)
+             
 
       # ODE Step
 
@@ -574,13 +531,11 @@ class player:
 
     vel = self.ode_body.getLinearVel()
 
-    if vel[0] == 0 and vel[1] == 0:
-      self.doMovementLock = False
+    if (abs(vel[0]) < 2.0 and abs(vel[1]) < 2.0) or task.time > 2.5:
       self.isKnockback = False
       self.moveSpecial = False
       return task.done
     self.isKnockback = True
-    self.doMovementLock = True
     return task.cont
 
   def moveLock(self, task = None, time = None):
@@ -739,34 +694,6 @@ class player:
 
     return task.cont
 
-  def getBumpPower(self, enemyResist):
-
-    """
-    Get player bump power based on enemy resist.
-    """
-
-    # Define
-    power = []
-
-    vel = self.ode_body.getLinearVel()
-    # Formula
-    for i in range(len(self.direction)):
-
-      #if abs(vel[i]) > self.moveSpeed: vel[i] = self.moveSpeed
-
-      # FORMULA!!!
-      thisPower = self.moveVal[i] * (((abs(vel[i]) / 1.5) + (abs(vel[i] / (self.moveSpeed * 1.5)) * self.power)) - enemyResist)
-
-      # Min
-      if abs(thisPower) < 5.0: thisPower = 5.0 * self.moveVal[i]
-
-      # Max
-      if abs(thisPower) > 20.0:  thisPower = 20.0 * self.moveVal[i]
-
-      power.append(thisPower)
-
-    return power
-
   def reduceResist(self, ammt = .5):
 
     """
@@ -851,58 +778,6 @@ class player:
     else:
       self.specialCooldown = False
 
-  def takeSnapshot(self):
-
-    """
-    Returns a snapshot of this player.
-    """
-
-    if self.snapshot: return self.snapshot
-
-    self.actor.pose("idle", 5)
-
-    # File Name
-    filename = str(self.id)
-
-    # Width and Height
-    width = 512
-    height = 512
-
-    # Make a buffer.
-    tex=Texture()
-    mybuffer = base.win.makeTextureBuffer('HDScreenShotBuff',width,height,tex,True)
-
-    # Make a new camera.
-    cam=Camera('SnapshotCam') 
-
-    lens = OrthographicLens()
-    lens.setFilmSize(1.1, 15)
-    
-    cam.setLens(lens) 
-    cam.getLens().setAspectRatio(width/height) 
-   
-    pCam=NodePath(cam) 
-      
-    mycamera = base.makeCamera(mybuffer,useCamera=pCam)
-    mycamera.setX(self.actor.getX() - 0.5)    
-    mycamera.setZ(self.actor.getZ() - 1.75)
-    mycamera.setY(self.actor.getY() - 9.0) 
-
-    mycamera.lookAt(self.actor)
-
-    # Set scene related stuff     
-    myscene = self.actor
-    mycamera.node().setScene(myscene) 
-
-    # Generate a image.
-    base.graphicsEngine.renderFrame()
-    tex = mybuffer.getTexture() 
-    mybuffer.setActive(False) 
-    self.snapshot = tex
-    base.graphicsEngine.removeWindow(mybuffer)
-    #self.snapshot.write("test" + str(self.id) + ".jpg")
-
-    return self.snapshot
 
   def particlePlay(self, name, time, doReturn = False):
 
