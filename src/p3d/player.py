@@ -327,6 +327,7 @@ class player:
       tilePos = self.getTilePos()
       pos = self.ode_body.getPosition()
 
+      isTileCol = False
       for x in range(-2,2):
         for y in range(0,2):
           for z in range(-2,2):
@@ -367,9 +368,15 @@ class player:
               
               elif self.colWithTile(i['pos'] * 2.0):
 
+                isTileCol = True
+
                 if not i['id'] == 2 and self.noCollide == 1: continue
 
                 self.isOnGround = False  
+
+                self.ode_body.setPosition(self.noTilePos[0] * 2.0, self.noTilePos[1] * 2.0, self.ode_body.getPosition()[2])
+                force = [0,0,0]
+                vel = [0,0,0]
 
                 for x in range(len(self.moveVal)):
                   if (i['pos'][x] * 2.0) - pos[x] < 0:                     
@@ -378,7 +385,9 @@ class player:
                     
                   else:
                     if vel[x] > 0:
-                      vel[x] = -1.0
+                      vel[x] = -2.0
+
+                
 
             # Fall off the side
             if pos[2] < -10:
@@ -444,7 +453,9 @@ class player:
                 # Flag characters to not accept collisions from each other for the next .5 seconds
                 self.setNoCollide(.5, i)
                 i.setNoCollide(.5, self)
-             
+
+      if not isTileCol:
+        self.noTilePos = self.getTilePos()        
 
       # ODE Step
 

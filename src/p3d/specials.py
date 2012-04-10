@@ -32,7 +32,7 @@ class specials(actions.actions):
     else:
       self.player.isKnockback = False
       if self.player.movement == [0,0]:
-        self.player.setMovement(self.player.power * 1.75, True, False)
+        self.player.setMovement(self.player.power * 1.25, True, False)
         self.player.setSpecialCooldown()
     
       return task.done
@@ -74,7 +74,7 @@ class specials(actions.actions):
         p.getParticlesList()[0].renderer.setNonanimatedTheta(45.0)
                 
       self.player.isKnockback = False
-      self.player.setMovement(20.0, True, False)
+      self.player.setMovement(15.0, True, False)
       self.player.noCollide = 1
       self.player.setSpecialCooldown()
 
