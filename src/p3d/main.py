@@ -114,9 +114,11 @@ class ChompinBomper(ShowBase):
     base.playerid = 0
     base.players = []
     base.players.append(player.player(character, True, 1))
-    base.players.append(player.player("chompy", True, 2))
+    base.players.append(player.player("renoki", False, None))
     base.players.append(player.player("renoki", True, 3))
     #base.players.append(player.player("chompy", False))   
+
+    base.players[1].ai()
 
     # Load Camera
     base.gameCam = camera.camera(base.players[0])

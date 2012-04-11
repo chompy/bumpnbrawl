@@ -223,11 +223,85 @@ class player:
     self.land_cloud.setTransparency(TransparencyAttrib.MAlpha)
     self.land_cloud.setTwoSided(True)
     self.land_cloud.hide()
-
-
-    
+  
     # Begin Animation
     self.setAnim(self.animDefault, True)
+
+  def ai(self, task = None):
+
+    """
+    Character AI handling.
+    """
+
+    if not task:
+      taskMgr.add(self.ai, "Player_" + str(self.id) + "_AILoop")
+
+    else:
+
+      # Find something to persue
+      persue = base.players[0].actor
+
+      # Get positions
+      myPos = self.actor.getPos()
+      enePos = persue.getPos()
+
+      # Determine what direction opponent is in.
+      x = enePos[0] - myPos[0]
+      y = enePos[1] - myPos[1]
+
+      try:
+        prevDir = self.aiDir 
+      except:
+        prevDir = [0,0]
+
+      self.aiDir = [0,0]
+      if x > 2.0: self.aiDir[0] = 1
+      if x < -2.0: self.aiDir[0] = -1
+      if y > 2.0: self.aiDir[1] = 1
+      if y < -2.0: self.aiDir[1] = -1     
+
+      # Determine if any obstacles are ahead
+      if self.aiCheckObstacle(self.aiDir):
+        for i in range(2):
+          newDir = [self.aiDir[0], self.aiDir[1]]
+          newDir[i] = 0
+          if not self.aiCheckObstacle(newDir):
+            self.aiDir = newDir
+            break
+
+      # If falling don't try to move...
+      if not self.isOnGround:
+        self.aiDir = [0,0]
+
+
+      # If persuer is falling don't persue...
+      if persue.getZ() < 0.0:
+        self.aiDir = [0,0]
+
+      if not self.aiDir == prevDir:
+        self.setMoveVal([.1,.1])
+        self.setMoveVal(self.aiDir)
+
+      return task.cont
+
+  def aiCheckObstacle(self, goDir):
+    tilePos = self.getTilePos()
+
+    # Check for a solid tile
+    for x in range(3):
+      for y in range(3):
+        if str(int(tilePos[0]) + (goDir[0] * x)) + "_" + str(int(tilePos[1]) + (goDir[1] * y)) + "_" + str(int(tilePos[2])) in base.tileCoords:
+          i = base.tileCoords[str(int(tilePos[0]) + (goDir[0] * x)) + "_" + str(int(tilePos[1]) + (goDir[1] * y)) + "_" + str(int(tilePos[2]))]
+
+          if not i['solid']: continue
+          return True
+
+    # Check if there is a drop
+    for x in range(3):
+      for y in range(3 ):
+        if not str(int(tilePos[0]) + (goDir[0] * x)) + "_" + str(int(tilePos[1]) + (goDir[1] * y)) + "_" + str(int(tilePos[2] - 1)) in base.tileCoords:
+          return True
+    
 
   def setMoveVal(self, kbVal):
 
