@@ -9,6 +9,7 @@ import sys
 # Config
 loadPrcFile("../../assets/Config.prc")
 loadPrcFileData('', 'audio-library-name p3openal_audio')
+loadPrcFileData('', 'window-title	Bump N Brawl')
 
 
 # Import game specific modules

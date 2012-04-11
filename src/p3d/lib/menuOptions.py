@@ -225,8 +225,9 @@ class menuOptions(DirectObject):
     Activate keyboard selection.
     """
   
-    base.accept("p1_up", self.keyboardSelect, [-1])
-    base.accept("p1_down", self.keyboardSelect, [1]) 
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_up", self.keyboardSelect, [-1])
+      base.accept("p" + str(x + 1) + "_down", self.keyboardSelect, [1]) 
 
     self.keyboardSelect(0)
 
@@ -236,11 +237,12 @@ class menuOptions(DirectObject):
     Deactivate keyboard, ungray options.
     """
 
-    base.accept("p1_up", self.activateKeyboard)
-    base.accept("p1_down", self.activateKeyboard)
-    base.ignore("p1_left")
-    base.ignore("p1_right")
-    base.ignore("p1_btna")
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_up", self.activateKeyboard)
+      base.accept("p" + str(x + 1) + "_down", self.activateKeyboard)
+      base.ignore("p" + str(x + 1) + "_left")
+      base.ignore("p" + str(x + 1) + "_right")
+      base.ignore("p" + str(x + 1) + "_btna")
 
     for i in range(len(self.optionNodes)):
       node = self.optionNodes[i]
@@ -285,13 +287,15 @@ class menuOptions(DirectObject):
     base.ignore("p1_left")    
     base.ignore("p1_right")    
     if len(self.scrollOptions[self.selected]) > 1:
-      base.accept("p1_right", self.scrollOption, [1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
-      base.accept("p1_left", self.scrollOption, [-1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
+      for x in range(4):
+        base.accept("p" + str(x + 1) + "_right", self.scrollOption, [1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
+        base.accept("p" + str(x + 1) + "_left", self.scrollOption, [-1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
 
     # Set button press
     else:
       if self.scrollOptions[self.selected][0][1]:
-        base.accept("p1_btna", self.scrollOptions[self.selected][0][1], self.scrollOptions[self.selected][0][2])
+        for x in range(4):
+          base.accept("p" + str(x + 1) + "_btna", self.scrollOptions[self.selected][0][1], self.scrollOptions[self.selected][0][2])
     
         
 
