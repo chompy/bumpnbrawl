@@ -19,6 +19,7 @@ class specials(actions.actions):
 
       # If special is cooling down.
       if self.player.specialCooldown: return None
+      self.player.setSpecialCooldown()
 
       # Play activate sound
       self.player.sfx['special'].play()
@@ -33,8 +34,7 @@ class specials(actions.actions):
       self.player.isKnockback = False
       if self.player.movement == [0,0]:
         self.player.setMovement(self.player.power * 1.25, True, False)
-        self.player.setSpecialCooldown()
-    
+   
       return task.done
 
   def renoki_special(self, task = None):
@@ -48,6 +48,7 @@ class specials(actions.actions):
 
       # If special is cooling down.
       if self.player.specialCooldown: return None
+      self.player.setSpecialCooldown()
 
       # Play activate sound
       self.player.sfx['special'].play()
@@ -76,9 +77,8 @@ class specials(actions.actions):
       self.player.isKnockback = False
       self.player.setMovement(15.0, True, False)
       self.player.noCollide = 1
-      self.player.setSpecialCooldown()
 
-      taskMgr.doMethodLater(1.25, self.renoki_reset, "Player_" + str(self.player.id) + "_Action_SpecialReset")
+      taskMgr.doMethodLater(1.5, self.renoki_reset, "Player_" + str(self.player.id) + "_Action_SpecialReset")
 
   def renoki_reset(self, task = None):
 
@@ -98,6 +98,9 @@ class specials(actions.actions):
 
       # If special is cooling down.
       if self.player.specialCooldown: return None
+      self.player.setSpecialCooldown()
+
+      self.player.moveSpecial = True
 
       # Play activate sound
       self.player.sfx['special'].play()
@@ -110,8 +113,7 @@ class specials(actions.actions):
       taskMgr.doMethodLater(1.15, self.hawk_punch_play, "Player_" + str(self.player.id) + "_Action_PunchParticles", extraArgs=[])    
 
     else:
-
-      self.player.setSpecialCooldown()
+      self.player.moveSpecial = False
 
       hitRange = 3
      
