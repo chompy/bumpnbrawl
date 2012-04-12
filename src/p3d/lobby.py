@@ -7,7 +7,8 @@ from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.fsm.FSM import FSM
-from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScaleInterval, LerpHprInterval
+from direct.interval.IntervalGlobal import *
+from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScaleInterval, LerpHprInterval, LerpPosInterval
 from direct.interval.MetaInterval import Sequence
 
 from lib import menuBars, menuOptions, inputHelp
@@ -44,6 +45,12 @@ for i in charList:
   if os.path.exists(base.assetPath + "/characters/" + i + "/name.txt"):
     name = open(base.assetPath + "/characters/" + i + "/name.txt", "r").read()
 
+  # Load Special ability name from external file
+  special = "n/a"
+  if os.path.exists(base.assetPath + "/characters/" + i + "/special.txt"):
+    special = open(base.assetPath + "/characters/" + i + "/special.txt", "r").read()
+
+
   # Load stats from external file...
   moveSpeed = 1.0
   power = 1.0
@@ -58,6 +65,7 @@ for i in charList:
   data['speed'] = moveSpeed
   data['power'] = power
   data['resist'] = resist
+  data['special'] = special
   data['picture'] = base.assetPath + "/characters/" + i + "/picture.jpg"
   charData.append(data)
 
@@ -122,9 +130,9 @@ class gameLobby(FSM):
     self.menuBar.node.setZ(.7)
 
     # Menu Title
-    TITLE = OnscreenImage(image = base.assetPath + "/menu/title_gamelobby.png", pos = (0, 0, .8), scale=(.5), parent=self.node2d)
+    TITLE = OnscreenImage(image = base.assetPath + "/menu/title_gamelobby.png", pos = (0, 0, .87), scale=(.4), parent=self.node2d)
     TITLE.setTransparency(TransparencyAttrib.MAlpha)
-    self.addWindowNode(TITLE, -1, .5)
+    self.addWindowNode(TITLE, -1, .4)
 
     # Sidebar
     SIDEBAR = OnscreenImage(image = base.assetPath + "/menu/lobby_sidebar.png", pos = (0, 0, 0), scale=(1.5), parent=self.node2d)
@@ -132,7 +140,7 @@ class gameLobby(FSM):
     self.addWindowNode(SIDEBAR, 1, -1.5)
 
     # Seperators
-    charSelect = OnscreenText(text = 'character select', pos = (0, .575), scale = .065, shadow=(.1,.1,.1,.5), fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.node2d)
+    charSelect = OnscreenText(text = 'character select', pos = (0, .535), scale = .065, shadow=(.1,.1,.1,.5), fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.node2d)
     self.addWindowNode(charSelect, -1, .1)
 
     # Show Characters
@@ -178,6 +186,24 @@ class gameLobby(FSM):
 
       self.playerSlots.append(pp)
 
+    # All Ready
+    allRdyTxt  = OnscreenText(text = 'All Ready?', pos = (0, .05), scale = .1, shadow=(.1,.1,.1,.5), fg=(1,1,1,1), font=self.boldFont, align=TextNode.ALeft, parent=self.node2d)
+    cntTxt = OnscreenText(text = "Press 'button 1' to continue!", pos = (0, -.05), scale = .065, shadow=(.1,.1,.1,.5), fg=(1,1,1,1), font=self.regFont, align=TextNode.ALeft, parent=self.node2d)
+
+    self.rdyLerp = Parallel(
+       LerpPosInterval(allRdyTxt, 1.0, (0,0,0), (-.5, 0, 0)), 
+       LerpPosInterval(cntTxt, 1.0, (0,0,0), (.5, 0, 0)),
+       LerpColorScaleInterval(allRdyTxt, 1.0, (1,1,1,1), (1,1,1,0)),
+       LerpColorScaleInterval(cntTxt, 1.0, (1,1,1,1), (1,1,1,0))
+    )
+
+    self.unRdyLerp = Parallel(
+       LerpPosInterval(allRdyTxt, 1.0, (-.5,0,0), (0, 0, 0)), 
+       LerpPosInterval(cntTxt, 1.0, (.5,0,0), (0, 0, 0)),
+       LerpColorScaleInterval(allRdyTxt, 1.0, (1,1,1,0), (1,1,1,1)),
+       LerpColorScaleInterval(cntTxt, 1.0, (1,1,1,0), (1,1,1,1))
+    )
+    self.unRdyLerp.start()    
 
     # Bind Window Event
     self.windowEvent()  
@@ -263,9 +289,6 @@ class characterPortrait(NodePath):
     else:
       self.text[number - 1].hide()
 
-  def hideNumber(self):
-    self.text.hide()
-
   def setImage(self, char_image):
     self.char_image = char_image
     self.char.setImage(char_image)
@@ -310,6 +333,38 @@ class playerProfile(NodePath):
     self.playerName = OnscreenText(text = "guest", pos = (0, .08), scale = .05, fg=(.694,.031,.031,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect)
     self.charName = OnscreenText(text = "chompy", pos = (0, .045), scale = .04, fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect)   
 
+    # Character Stats
+    OnscreenText(text = "pow", pos = (.15, -.01), scale = .04, fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect)  
+    OnscreenText(text = "rst", pos = (.15, -.04), scale = .04, fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect)
+    OnscreenText(text = "spd", pos = (.15, -.07), scale = .04, fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect)
+    OnscreenText(text = "spc", pos = (.15, -.1), scale = .04, fg=(1,1,1,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect)
+
+    self.spc_text = OnscreenText(text = "chomp tackle", pos = (.25, -.1), scale = .03, fg=(.694,.031,.031,1), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect)
+
+
+    stat_frame = CardMaker("PlayerHud_Snapshot")
+    stat_frame.setFrame(0, .2, 0, .02)
+    stat_frame.setColor(.694,.031,.031,1)
+
+    self.pow_bar = self.charSelect.attachNewNode(stat_frame.generate())
+    self.pow_bar.setPos(.25, 0, -.01)
+
+    self.rst_bar = self.charSelect.attachNewNode(stat_frame.generate())
+    self.rst_bar.setPos(.25, 0, -.04)
+
+    self.spd_bar = self.charSelect.attachNewNode(stat_frame.generate())
+    self.spd_bar.setPos(.25, 0, -.07)
+
+    # Ready Text
+    self.rdy_text = OnscreenText(text = "READY", pos = (0, -.12), scale = .2, fg=(1,1,1,1), shadow=(.8,.8,.8,.6), font=self.pixelFont, align=TextNode.ALeft, parent=self.charSelect) 
+    self.rdy_text.setR(-8)
+    rdyTextLerp = Sequence(
+      LerpColorScaleInterval(self.rdy_text, .25, (.694,.031,.031,1)),
+      LerpColorScaleInterval(self.rdy_text, .25, (1,1,1,1))
+    )
+    rdyTextLerp.loop()
+    self.rdy_text.hide()
+
     self.showNextJoinProfile()
 
     self.charSelected = 0
@@ -336,6 +391,7 @@ class playerProfile(NodePath):
             base.accept("p" + str(x + 1) + "_btna", i.selectProfile, [x + 1])
       else:
         i.joinText.hide()
+   
 
   def cancelPlayer(self):
     self.player = -1
@@ -349,6 +405,17 @@ class playerProfile(NodePath):
 
   def selectProfile(self, playerNo = None):
     profile = "guest"
+
+    # Remove instructions for all ready
+    allRdy = True
+    noneActive = True
+    for i in base.playerProfileSelector:
+      if not i.player > 0: continue
+      else: noneActive = False
+      if not i.state == 3: allRdy = False
+
+    if allRdy and not noneActive: 
+      base.gameLobby.unRdyLerp.start()
 
     # Set Player Number
     self.player = playerNo
@@ -385,8 +452,20 @@ class playerProfile(NodePath):
     self.profileSelect.show()        
 
   def selectCharacter(self, profile):
-    self.state = 2
 
+    # Remove instructions for all ready
+    allRdy = True
+    for i in base.playerProfileSelector:
+      if not i.player > 0: continue
+      if not i.state == 3: allRdy = False
+
+    if allRdy: 
+      base.gameLobby.unRdyLerp.start()
+
+    self.state = 2
+    self.rdy_text.hide()
+
+    base.accept("p" + str(self.player) + "_btna", self.ready, [profile])  
     base.accept("p" + str(self.player) + "_btnb", self.selectProfile, [self.player])  
 
     base.accept("p" + str(self.player) + "_left", self.updateCharSelectGrid, [-1])
@@ -401,6 +480,26 @@ class playerProfile(NodePath):
     self.joinText.hide()
     self.profileSelect.hide()
 
+  def ready(self, profile):
+
+    self.state = 3
+    self.rdy_text.show()
+
+    # Show instructions for all ready
+    allRdy = True
+    for i in base.playerProfileSelector:
+      if not i.player > 0: continue
+      if not i.state == 3: allRdy = False
+
+    if allRdy:
+      base.gameLobby.rdyLerp.start()
+
+    base.accept("p" + str(self.player) + "_btnb", self.selectCharacter, [profile])     
+    base.ignore("p" + str(self.player) + "_left")
+    base.ignore("p" + str(self.player) + "_right")
+    base.ignore("p" + str(self.player) + "_up")
+    base.ignore("p" + str(self.player) + "_down")
+
   def updateCharSelectGrid(self, select):
 
     select = self.charSelected + select
@@ -414,7 +513,7 @@ class playerProfile(NodePath):
     stillSelected = False
     for i in base.playerProfileSelector:
       if i == self: continue
-      if i.charSelected == self.charSelected and i.state == 2: 
+      if i.charSelected == self.charSelected and i.state >= 2: 
         stillSelected = True
 
     if not stillSelected:
@@ -428,7 +527,10 @@ class playerProfile(NodePath):
     self.pPortrait.setImage(charData[self.charSelected]['picture'])
     self.charName.setText(charData[self.charSelected]['name'].lower())
 
-gameInput.gameInput() 
-m = gameLobby()
-#m.request("Title")
-run()
+    self.pow_bar.setScale( (charData[self.charSelected]['power'] / 3.0, 1, 1) )
+    self.rst_bar.setScale( (charData[self.charSelected]['resist'] / 3.0, 1, 1) )
+    self.spd_bar.setScale( (charData[self.charSelected]['speed'] / 3.0, 1, 1) )
+    self.spc_text.setText(charData[self.charSelected]['special'].lower())
+
+base.gameLobby = gameLobby()
+

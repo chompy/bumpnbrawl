@@ -9,6 +9,7 @@ import sys
 # Config
 loadPrcFile("../../assets/Config.prc")
 loadPrcFileData('', 'audio-library-name p3openal_audio')
+loadPrcFileData('', 'window-title	Bump N Brawl')
 
 
 # Import game specific modules
@@ -112,15 +113,18 @@ class ChompinBomper(ShowBase):
     # Load Players
     base.playerid = 0
     base.players = []
-    base.players.append(player.player(character, True, 1))
-    base.players.append(player.player("chompy", True, 2))
-    base.players.append(player.player("renoki", True, 3))
+    base.players.append(player.player(character, False, None))
+    base.players.append(player.player("renoki", False, None))
+    base.players.append(player.player("hawk", False, None))
     #base.players.append(player.player("chompy", False))   
 
+    base.players[0].ai()
+    base.players[1].ai()
+    base.players[2].ai()
     # Load Camera
     base.gameCam = camera.camera(base.players[0])
-    #base.gameCam.add(base.players[1])
-    #base.gameCam.add(base.players[2])    
+    base.gameCam.add(base.players[1])
+    base.gameCam.add(base.players[2])    
 
     # Game Hud
     self.hud = hud.gameHud()

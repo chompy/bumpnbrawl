@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ompiled source #
 ###################
 *.com
@@ -34,3 +35,9 @@ Icon?
 Thumbs.db
 .svn
 *.pyc
+=======
+*.py~
+*.pyc
+*.pyc~
+*.txt~
+>>>>>>> 94dc257f63d13b85be384fa44168c52e4347888b

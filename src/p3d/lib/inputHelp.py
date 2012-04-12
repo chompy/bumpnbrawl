@@ -129,8 +129,9 @@ class inputHelp():
 
     try:
       key = KBD_REPLACE[key]
-    except KeyError: 1            
+    except KeyError: 1
 
+    if not key: return event
     return key.strip()
             
 

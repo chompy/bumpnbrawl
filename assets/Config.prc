@@ -1,10 +1,10 @@
 framebuffer-multisample 1
 multisamples 8
 sync-video #t
-#show-frame-rate-meter #t
+show-frame-rate-meter #t
 win-size 1280 720
-clock-mode limited
-clock-frame-rate 30
+#clock-mode limited
+#clock-frame-rate 30
 p1_up arrow_up
 p1_btna shift
 p1_btnb z
@@ -21,11 +21,11 @@ p3_down j
 p3_left h
 p3_btna y
 p3_btnb i
-p4_up 8
-p4_right 6
-p4_down 5
-p4_left 4
-p4_btna 7
-p4_btnb 9
+p4_up joy1_btn14
+p4_right joy1_btn13
+p4_down joy1_btn15
+p4_left joy1_btn12
+p4_btna joy1_btn1
+p4_btnb joy1_btn2
 p1_right arrow_right
 p1_left arrow_left

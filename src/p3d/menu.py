@@ -11,7 +11,7 @@ from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScale
 from direct.interval.MetaInterval import Sequence
 
 from lib import menuBars, menuOptions, inputHelp
-import gameInput
+import gameInput, lobby
 
 loadPrcFile("../../assets/Config.prc")
 
@@ -37,12 +37,10 @@ try:
   screensize = [user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)]
 except:
 
-  # Linux
-  try:
-    screensize = os.system("xrandr  | grep \* | cut -d' ' -f4").split("x")
-  except:
-    screensize = [640,480]
-  
+  # Linux / Mac
+  import commands
+  screensize =  commands.getstatusoutput("xrandr  | grep \* | cut -d' ' -f4")[1].split("\n")[0].split("x")
+  screensize = [int(screensize[0]), int(screensize[1])]
 
 class mainMenu(FSM):
 
@@ -69,6 +67,9 @@ class mainMenu(FSM):
     self.node.reparentTo(render)
 
     self.windowObj = []
+
+    # Game Lobby
+    base.gameLobby.node2d.hide()
 
     # Set Text Properites
     tpMgr = TextPropertiesManager.getGlobalPtr()
@@ -172,7 +173,8 @@ class mainMenu(FSM):
     """
 
     self.titleNode.show()
-    base.accept("p1_btna", self.request, ['Main'])
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btna", self.request, ['Main'])
     base.accept("mouse1", self.request, ['Main'])
 
   def exitTitle(self):
@@ -210,7 +212,7 @@ class mainMenu(FSM):
 
     OPTIONS = [
       ['Online', self.request, ['Online']],
-      ['Local', self.request, ['Local']],
+      ['Offline', self.request, ['Lobby']],
       ['Options', self.request, ['Options']],
       ['Quit', sys.exit, []]
     ]
@@ -258,7 +260,8 @@ class mainMenu(FSM):
     self.menuOptions.setOptions(MO_OPTIONS)
 
     # Add player input back button
-    base.accept("p1_btnb", self.request, ['Main'])
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btnb", self.request, ['Main'])
 
     # Input Help Options
     self.inputHelp.setOptions([
@@ -292,12 +295,13 @@ class mainMenu(FSM):
     # Input Help Options
     self.inputHelp.setOptions([])
 
-    base.ignore("p1_left")
-    base.ignore("p1_right")      
-    base.ignore("p1_up")      
-    base.ignore("p1_down")
-    base.ignore("p1_btna")      
-    base.ignore("p1_btnb")    
+    for x in range(4):
+      base.ignore("p" + str(x + 1) + "_left")
+      base.ignore("p" + str(x + 1) + "_right")      
+      base.ignore("p" + str(x + 1) + "_up")      
+      base.ignore("p" + str(x + 1) + "_down")
+      base.ignore("p" + str(x + 1) + "_btna")
+      base.ignore("p" + str(x + 1) + "_btnb")    
 
   def enterControlConfigSelect(self):
 
@@ -333,7 +337,8 @@ class mainMenu(FSM):
     self.menuOptions.setOptions(MO_OPTIONS)
 
     # Add player input back button
-    base.accept("p1_btnb", self.request, ['Options'])
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btnb", self.request, ['Options'])
 
     # Input Help Options
     self.inputHelp.setOptions([
@@ -403,7 +408,83 @@ class mainMenu(FSM):
     ])            
 
     # Add player input back button
-    base.accept("p1_btnb", self.request, ['ControlConfigSelect'])    
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btnb", self.request, ['ControlConfigSelect'])    
+
+  def enterLobby(self):
+
+    """
+    Enter the game lobby.
+    """
+    # Bar Options
+    OPTIONS = [
+      ['Back', self.request, ['Main']]
+    ]
+
+    # Input Help Options
+    self.inputHelp.setOptions([
+      ['Back', 'escape'],
+    ])  
+
+    base.accept("escape", self.request, ['Main'])   
+
+    # Config Options
+    self.menuBar.setOptions(OPTIONS, False)
+
+    for x in range(4):
+      base.ignore("p" + str(x + 1) + "_left")
+      base.ignore("p" + str(x + 1) + "_right")      
+      base.ignore("p" + str(x + 1) + "_up")      
+      base.ignore("p" + str(x + 1) + "_down")
+      base.ignore("p" + str(x + 1) + "_btna")
+      base.ignore("p" + str(x + 1) + "_btnb")   
+
+    logoLerp = LerpColorScaleInterval(self.logo, .7, (1,1,1,0))
+    logoLerp.start()
+
+    base.gameLobby.node2d.show()
+    base.gameLobby.node2d.setTransparency(TransparencyAttrib.MAlpha)
+
+    lobbyLerp = LerpColorScaleInterval(base.gameLobby.node2d, .7, (1,1,1,1), (1,1,1,0))
+    lobbyLerp.start()
+
+    for i in base.gameLobby.playerSlots:
+      i.showNextJoinProfile()
+ 
+
+  def exitLobby(self):
+
+    """
+    Exit the game lobby.
+    """
+
+    for x in range(4):
+      base.ignore("p" + str(x + 1) + "_left")
+      base.ignore("p" + str(x + 1) + "_right")      
+      base.ignore("p" + str(x + 1) + "_up")      
+      base.ignore("p" + str(x + 1) + "_down")
+      base.ignore("p" + str(x + 1) + "_btna")
+      base.ignore("p" + str(x + 1) + "_btnb")   
+
+    logoLerp = LerpColorScaleInterval(self.logo, .7, (1,1,1,1))
+    logoLerp.start()
+
+    lobbyLerp = LerpColorScaleInterval(base.gameLobby.node2d, .7, (1,1,1,0), (1,1,1,1))
+    lobbyLerp.start()
+
+    base.gameLobby.unRdyLerp.finish()
+
+    base.ignore("escape")
+
+    for i in base.gameLobby.playerSlots:
+      i.cancelPlayer()
+
+    for i in base.charSlots:
+      i.unselect()
+      for x in range(4):
+        i.setNumber(x + 1, False)
+
+    taskMgr.doMethodLater(1, base.gameLobby.node2d.hide, "MenuHideLobby", extraArgs=[])
 
   def defineInput(self, playerNo, inputDefine):
 
@@ -412,12 +493,13 @@ class mainMenu(FSM):
     """
 
     self.menuOptions.optionNodes[inputDefine][2]['text'] = "...press key..."
-    base.ignore("p1_left")
-    base.ignore("p1_right")      
-    base.ignore("p1_up")      
-    base.ignore("p1_down")
-    base.ignore("p1_btna")      
-    base.ignore("p1_btnb")
+    for x in range(4):
+      base.ignore("p" + str(x + 1) + "_left")
+      base.ignore("p" + str(x + 1) + "_right")      
+      base.ignore("p" + str(x + 1) + "_up")      
+      base.ignore("p" + str(x + 1) + "_down")
+      base.ignore("p" + str(x + 1) + "_btna")
+      base.ignore("p" + str(x + 1) + "_btnb")    
     self.input.pollKeys()
     taskMgr.doMethodLater(.2, base.accept, "MenuDelayConfigKeyPress", ["keyPoll", self.getInput, [playerNo, inputDefine]])
 
@@ -449,7 +531,8 @@ class mainMenu(FSM):
     self.menuOptions.optionNodes[inputDefine][2]['text'] = self.inputHelp.getEventKey(self.configKeys[inputDefine])
 
     # Add player input back button
-    base.accept("p1_btnb", self.request, ['ControlConfigSelect'])    
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btnb", self.request, ['ControlConfigSelect'])    
     
 
   def setWindowMode(self, isFullscreen):

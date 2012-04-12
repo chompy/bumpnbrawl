@@ -1,4 +1,5 @@
 from pandac.PandaModules import Point3
+from direct.interval.LerpInterval import LerpPosInterval
 import math
 
 class camera:
@@ -92,7 +93,13 @@ class camera:
       camPos[2] = 30 + (distance / 1.5)
         
       camPos[1] -= 30 + (distance * .75)
-      base.camera.setFluidPos(camPos)
+
+      lastCam = base.camera.getPos()
+      if abs(lastCam[2] - camPos[2]) > 7:
+        camLerp = LerpPosInterval(base.camera, .7, camPos, fluid=1, bakeInStart=1)
+        camLerp.start()
+      else:
+        base.camera.setFluidPos(camPos)
 
     # Position Background to follow cam
     if base.background:

@@ -118,8 +118,9 @@ class menuBars(DirectObject):
     menu go up and down with arrow keys.
     """
   
-    base.accept("p1_up", self.keyboardSelect, [-1])
-    base.accept("p1_down", self.keyboardSelect, [1]) 
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_up", self.keyboardSelect, [-1])
+      base.accept("p" + str(x + 1) + "_down", self.keyboardSelect, [1]) 
 
     self.keyboardSelect(0)   
 
@@ -129,9 +130,10 @@ class menuBars(DirectObject):
     Deactivate keyboard.
     """
 
-    base.accept("p1_up", self.activateKeyboard)
-    base.accept("p1_down", self.activateKeyboard)
-    base.ignore("p1_btna")
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_up", self.activateKeyboard)
+      base.accept("p" + str(x + 1) + "_down", self.activateKeyboard)
+      base.ignore("p" + str(x + 1) + "_btna")
 
 
   def keyboardSelect(self, direction):
@@ -147,6 +149,8 @@ class menuBars(DirectObject):
     self.selected += direction
     if self.selected > len(self.buttons) - 1: self.selected = 0
     elif self.selected < 0: self.selected = len(self.buttons) - 1
+    
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btna", self.buttons[self.selected]['command'], self.buttons[self.selected]['extraArgs'])
 
-    base.accept("p1_btna", self.buttons[self.selected]['command'], self.buttons[self.selected]['extraArgs'])
     self.buttonMouseOn(self.buttons[self.selected])
