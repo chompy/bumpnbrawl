@@ -90,10 +90,12 @@ class camera:
 
       camPos = leftdownPoint + (centerPoint / 2.0)
 
-      camPos[2] = 30 + (distance / 1.5)
-        
-      camPos[1] -= 30 + (distance * .75)
-
+      camPos[2] = 20 + (distance / 1.5)
+      #camPos[2] = 30 + (distance / 1.5)
+		
+      camPos[1] -= 20 + (distance * .75)
+	  #camPos[1] -= 30 + (distance * .75)
+	  
       lastCam = base.camera.getPos()
       if abs(lastCam[2] - camPos[2]) > 7:
         camLerp = LerpPosInterval(base.camera, .7, camPos, fluid=1, bakeInStart=1)

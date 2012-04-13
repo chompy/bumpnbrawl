@@ -181,8 +181,8 @@ class actions:
     if not self.pickupObjIsPlayer and self.pickupObj:
       self.throwInt = ProjectileInterval(self.pickupObj,
                          startPos = self.pickupObj.getPos(),
-                         startVel = Point3(self.thrownDir[0] * 10.0, self.thrownDir[1] * 10.0, 3.0), duration = 1.4)    
-
+                         startVel = Point3(self.thrownDir[0] * 25.0, self.thrownDir[1] * 25.0, 3.0), duration = 1.4)    
+						 #startVel = Point3(self.thrownDir[0] * 10.0, self.thrownDir[1] * 10.0, 3.0), duration = 1.4)
       self.throwInt.start()
     
     self.thrownObj = self.pickupObj
