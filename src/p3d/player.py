@@ -171,7 +171,7 @@ class player:
     # Load stats from external file...
     if os.path.exists(base.assetPath + "/characters/" + character + "/stats.txt"): 
       statFile = open(base.assetPath + "/characters/" + character + "/stats.txt").read().split("\n")
-      self.moveSpeed = 5.0 + ( float(statFile[0].split(" ")[0]) * 2.5)
+      self.moveSpeed = 5.0 + ( float(statFile[0].split(" ")[0]) * 2.0)
       self.power = 5.0 + (float(statFile[1].split(" ")[0]) * 5.0)
       self.resist = 5.0 + (float(statFile[2].split(" ")[0]) * 5.0)
 
@@ -715,6 +715,8 @@ class player:
     if (abs(vel[0]) < 2.0 and abs(vel[1]) < 2.0) or task.time > .75:
       self.isKnockback = False
       self.moveSpecial = False
+      taskMgr.remove("Player_" + str(self.id) + "_MoveLock")
+      self.doMovementLock = False
       return task.done
     self.isKnockback = True
     return task.cont
@@ -937,9 +939,10 @@ class player:
     self.direction = [self.moveVal[0], self.moveVal[1]]
 
     if not canControl:
+      self.knockback()
+      self.moveLock(None, 9999)
       self.isKnockback = True
-      taskMgr.add(self.knockback, "Player_" + str(self.id) + "_Knockback")
-
+      
     # Play Sound
     if movement > 10:
       self.sfx['lunge'].play()
