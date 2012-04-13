@@ -171,7 +171,8 @@ class player:
     # Load stats from external file...
     if os.path.exists(base.assetPath + "/characters/" + character + "/stats.txt"): 
       statFile = open(base.assetPath + "/characters/" + character + "/stats.txt").read().split("\n")
-      self.moveSpeed = 5.0 + ( float(statFile[0].split(" ")[0]) * 2.0)
+
+      self.moveSpeed = 5.0 + ( float(statFile[0].split(" ")[0]) )
       self.power = 5.0 + (float(statFile[1].split(" ")[0]) * 5.0)
       self.resist = 5.0 + (float(statFile[2].split(" ")[0]) * 5.0)
 
@@ -207,6 +208,7 @@ class player:
        
     else:
       base.accept(str(self.onlineId) + "p" + self.controls + "_up", self.setMoveVal, [[0,1]])
+
       base.accept(str(self.onlineId) + "p" + self.controls + "_down", self.setMoveVal, [[0,-1]])
       base.accept(str(self.onlineId) + "p" + self.controls + "_left", self.setMoveVal, [[-1,0]])
       base.accept(str(self.onlineId) + "p" + self.controls + "_right", self.setMoveVal, [[1,0]])
@@ -543,7 +545,8 @@ class player:
                 
 
             # Fall off the side
-            if pos[2] < -10:
+            if pos[2] < -30:
+			#if pos[2] < -10:
               if not self.isDead:
                 lerpMe = LerpColorScaleInterval(self.actor, .5, (1,1,1,0))
                 lerpMe.start()
@@ -685,6 +688,7 @@ class player:
 
       azPos = self.actor.getZ()
       szPos = self.shadow_node.getZ()
+
 
       posDelta = (azPos - self.zOffset) - szPos
       if posDelta >= self.dimensions[2]:

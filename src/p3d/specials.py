@@ -33,8 +33,8 @@ class specials(actions.actions):
     else:
       self.player.isKnockback = False
       if self.player.movement == [0,0]:
-        self.player.setMovement(self.player.power * 1.25, True, False)
-   
+        self.player.setMovement(self.player.power * .75, True, False)
+		#self.player.setMovement(self.player.power * 1.25, True, False)
       return task.done
 
   def renoki_special(self, task = None):
@@ -76,6 +76,7 @@ class specials(actions.actions):
                 
       self.player.isKnockback = False
       self.player.setMovement(15.0, True, False)
+	  #self.player.setMovement(15.0, True, False)
       self.player.noCollide = 1
 
       taskMgr.doMethodLater(1.5, self.renoki_reset, "Player_" + str(self.player.id) + "_Action_SpecialReset")
