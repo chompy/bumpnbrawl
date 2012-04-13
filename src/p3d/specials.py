@@ -120,14 +120,14 @@ class specials(actions.actions):
       for i in base.players:
         if i == self.player: continue
         tilePos = i.getTilePos()          
-        for x in range(0, hitRange):
+        for x in range(hitRange):
           myTile = self.player.getTilePos()
           for y in range(len(self.player.direction)):
             myTile[y] += float(x) * self.player.direction[y]
  
           if myTile == tilePos:
 
-            power = (self.player.power * 2.0) - (i.resist * 1.5)
+            power = (self.player.power * 2.25) - (i.resist * 1.5)
 
             i.ode_body.setLinearVel(self.player.direction[0] * power, self.player.direction[1] * power, 0)
             i.reduceResist()

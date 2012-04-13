@@ -270,32 +270,20 @@ class player:
 
       self.aiDir = [0,0]
       if x > 1.0: self.aiDir[0] = 1
-      if x < -1.0: self.aiDir[0] = -1
-      if y > 1.0: self.aiDir[1] = 1
-      if y < -1.0: self.aiDir[1] = -1     
+      elif x < -1.0: self.aiDir[0] = -1
+      elif y > 1.0: self.aiDir[1] = 1
+      elif y < -1.0: self.aiDir[1] = -1     
 
       # Determine if any obstacles are ahead
       if self.aiCheckObstacle(self.aiDir):
+        if self.aiDir[0] <> 0:
+          self.aiDir[1] = -self.aiDir[0]
+          self.aiDir[0] = 0
 
-        self.aiLockTarget()
-        if not self.persue: return task.cont
+        elif self.aiDir[1] <> 0:
+          self.aiDir[0] = -self.aiDir[1]
+          self.aiDir[1] = 0      
 
-        for i in range(2):
-          newDir = [self.aiDir[0], self.aiDir[1]]
-          newDir[i] = 0
-          if not self.aiCheckObstacle(newDir):
-            self.aiDir = newDir
-            break
-
-      # If falling don't try to move...
-      if not self.isOnGround:
-        self.aiDir = [0,0]
-
-      # If persuer is falling don't persue...
-      if self.persue.actor.getZ() < 0.0:
-        self.aiDir = [0,0]
-        self.aiLockTarget()
-        if not self.persue: return task.cont
 
       # Evade attacks
       for i in base.players:
@@ -306,7 +294,7 @@ class player:
         
         eneSpeed = i.ode_body.getLinearVel()
 
-        if abs(eneSpeed[0]) > 5.5 or abs(eneSpeed[1]) > 5.5:
+        if abs(eneSpeed[0]) > 5.0 or abs(eneSpeed[1]) > 5.0:
           
           if abs(myTile[0] - eneTile[0]) < 7.0 and abs(myTile[1] - eneTile[1]) < 7.0:
 
@@ -326,16 +314,27 @@ class player:
             if eneTile[0] == myTile[0]:
               for x in range(-1,1):
                 newDir = [x, 0]
-                if self.aiCheckObstacle(newDir):
+                if not self.aiCheckObstacle(newDir):
                   self.aiDir = newDir
                   break
 
             elif eneTile[1] == myTile[1]:
               for x in range(-1,1):
                 newDir = [0, x]
-                if self.aiCheckObstacle(newDir):
+                if not self.aiCheckObstacle(newDir):
                   self.aiDir = newDir
                   break
+
+      # If falling don't try to move...
+      if not self.isOnGround:
+        self.aiDir = [0,0]
+
+      # If persuer is falling don't persue...
+      if self.persue.actor.getZ() < 0.0:
+        self.setMoveVal([.1,.1])
+        self.aiDir = [0,0]
+        self.aiLockTarget()
+        if not self.persue: return task.cont
             
 
       # Update movement if direction has changed
