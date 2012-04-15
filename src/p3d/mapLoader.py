@@ -53,12 +53,12 @@ class mapLoader:
       backgroundTex = loader.loadTexture(base.assetPath + "/tiles/themes/" + self.theme + "/background.png")
 
       bg = CardMaker("Map_Background")
-      bg.setFrame(-6,6,-10, 10)
-      bg_node = self.node.attachNewNode(bg.generate())
+      bg.setFrame(-1,1,-1, 1)
+      bg_node = base.camera.attachNewNode(bg.generate())
       bg_node.setTexture(backgroundTex)
       bg_node.setBillboardPointWorld()
-      bg_node.setZ(-30)
-      bg_node.setScale(12)
+      bg_node.setScale(5)
+      bg_node.setZ(-50)
 
       base.background = bg_node   
       

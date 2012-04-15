@@ -102,14 +102,6 @@ class camera:
         camLerp.start()
       else:
         base.camera.setFluidPos(camPos)
-
-    # Position Background to follow cam
-    if base.background:
-      try:
-        base.background.setFluidX(base.camera.getX())
-        base.background.setFluidY(base.camera.getY() + 35)
-      except: base.background = None
-
       
     return task.cont
 
