@@ -1,10 +1,10 @@
 from direct.actor.Actor import Actor
-from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib, CardMaker, TextureStage, Vec3
+from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib, CardMaker, TextureStage, Vec3, VBase3
 from direct.particles.ParticleEffect import ParticleEffect
 from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosInterval,LerpScaleInterval
 from direct.interval.IntervalGlobal import *
 from lib import basePolling
-import math,random, os, specials, ConfigParser
+import math,random, os, specials, ConfigParser, ai
 from pandac.PandaModules import OdeWorld, OdeBody, OdeMass, Quat
 
 # Load Sounds
@@ -159,7 +159,7 @@ class player:
     self.isDead = False
     self.showDashCloud = True
     self.isOnGround = False
-    self.persue = None
+    self.ai = None
 
     # Set Start Position
     self.startPos = base.playerStart[ (self.id % len(base.playerStart)) - 1]
@@ -240,149 +240,14 @@ class player:
     # Begin Animation
     self.setAnim(self.animDefault, True)
 
-  def ai(self, task = None):
-
-    """
-    Character AI handling.
-    """
-
-    if not task:
-      taskMgr.add(self.ai, "Player_" + str(self.id) + "_AILoop")
-
+  def activateAi(self):
+    if not self.ai:
+      self.ai = ai.ai(self)
     else:
+      self.ai.__init__(self)
 
-      # Find something to persue
-      if not self.persue:
-        self.aiLockTarget()
-
-      if not self.persue: return task.cont
-
-      # Get positions
-      myPos = self.actor.getPos()
-      enePos = self.persue.actor.getPos()
-
-      # Determine what direction opponent is in.
-      x = enePos[0] - myPos[0]
-      y = enePos[1] - myPos[1]
-
-      try:
-        prevDir = self.aiDir 
-      except:
-        prevDir = [0,0]
-
-      self.aiDir = [0,0]
-      if x > 1.0: self.aiDir[0] = 1
-      elif x < -1.0: self.aiDir[0] = -1
-      elif y > 1.0: self.aiDir[1] = 1
-      elif y < -1.0: self.aiDir[1] = -1     
-
-      # Determine if any obstacles are ahead
-      if self.aiCheckObstacle(self.aiDir):
-        if self.aiDir[0] <> 0:
-          self.aiDir[1] = -self.aiDir[0]
-          self.aiDir[0] = 0
-
-        elif self.aiDir[1] <> 0:
-          self.aiDir[0] = -self.aiDir[1]
-          self.aiDir[1] = 0      
-
-
-      # Evade attacks
-      for i in base.players:
-        if i == self: continue
-  
-        eneTile = i.getTilePos()
-        myTile = self.getTilePos()
-        
-        eneSpeed = i.ode_body.getLinearVel()
-
-        if abs(eneSpeed[0]) > 5.0 or abs(eneSpeed[1]) > 5.0:
-          
-          if abs(myTile[0] - eneTile[0]) < 7.0 and abs(myTile[1] - eneTile[1]) < 7.0:
-
-            if abs(myTile[0] - eneTile[0]) <= self.special_range and abs(myTile[0] - eneTile[0]) > self.special_minRange and (eneTile[0] == myTile[0] or eneTile[1] == myTile[1]) and not self.specialCooldown:
-
-              # Use special ability to attack
-              if self.special_type == "offense":
-                self.direction = self.aiDir
-                self.actions.useSpecial()
-
-              # Use Special ability to defend 
-              elif self.special_type == "defense" and (abs(eneSpeed[0]) > 10.0 or abs(eneSpeed[1]) > 10.0):
-                self.direction = self.aiDir
-                self.actions.useSpecial()
-                break               
-
-            if eneTile[0] == myTile[0]:
-              for x in range(-1,1):
-                newDir = [x, 0]
-                if not self.aiCheckObstacle(newDir):
-                  self.aiDir = newDir
-                  break
-
-            elif eneTile[1] == myTile[1]:
-              for x in range(-1,1):
-                newDir = [0, x]
-                if not self.aiCheckObstacle(newDir):
-                  self.aiDir = newDir
-                  break
-
-      # If falling don't try to move...
-      if not self.isOnGround:
-        self.aiDir = [0,0]
-
-      # If persuer is falling don't persue...
-      if self.persue.actor.getZ() < 0.0:
-        self.setMoveVal([.1,.1])
-        self.aiDir = [0,0]
-        self.aiLockTarget()
-        if not self.persue: return task.cont
-            
-
-      # Update movement if direction has changed
-      if not self.aiDir == prevDir:
-        self.setMoveVal([.1,.1])
-        self.setMoveVal(self.aiDir)
-
-      return task.cont
-
-  def aiCheckObstacle(self, goDir):
-    tilePos = self.getTilePos()
-
-    # Check for a solid tile
-    for x in range(3):
-      for y in range(3):
-        if str(int(tilePos[0]) + (goDir[0] * x)) + "_" + str(int(tilePos[1]) + (goDir[1] * y)) + "_" + str(int(tilePos[2])) in base.tileCoords:
-          i = base.tileCoords[str(int(tilePos[0]) + (goDir[0] * x)) + "_" + str(int(tilePos[1]) + (goDir[1] * y)) + "_" + str(int(tilePos[2]))]
-
-          if not i['solid']: continue
-          return True
-
-    # Check if there is a drop
-    pTilePos = self.persue.getTilePos()
-    if abs(tilePos[0] - pTilePos[0]) < 4.0 and abs(tilePos[1] - pTilePos[1]) < 4.0:
-      return False
-
-    for x in range(3 + int(math.ceil(abs(self.ode_body.getLinearVel()[0]) / 2.0)) ):
-      for y in range(3 + int(math.ceil(abs(self.ode_body.getLinearVel()[1]) / 2.0))):
-        if not str(int(tilePos[0]) + (goDir[0] * x)) + "_" + str(int(tilePos[1]) + (goDir[1] * y)) + "_" + str(int(tilePos[2] - 1)) in base.tileCoords:
-          return True
-    
-  def aiLockTarget(self):
-    target = None
-    minDist = 9999
-    
-    for i in base.players:
-      if i == self: continue
-      if i.actor.getZ() < 0.0: continue
-
-      distance = math.sqrt(  (abs(self.actor.getX() - i.actor.getZ()) ** 2) + (abs(self.actor.getY() - i.actor.getY()) ** 2))
-      if distance < minDist:
-        target = i
-        minDist = distance
-
-    self.persue = target
-    return target
+  def deactivateAi(self):
+    self.ai.stopAi()
 
   def setMoveVal(self, kbVal):
 
@@ -484,148 +349,143 @@ class player:
 
       isTileCol = False
       for x in range(-2,2):
-        for y in range(0,2):
-          for z in range(-2,2):
+        for y in range(-2,2):
+          for z in range(-2,1):
+          
+            try:
+              i = base.tileCoords[(int(tilePos[0]) + x, int(tilePos[1]) + y, int(tilePos[2]) + z)]
+            except KeyError: continue
 
- 
-            if str(int(tilePos[0]) + x) + "_" + str(int(tilePos[1]) + y) + "_" + str(int(tilePos[2]) + z) in base.tileCoords:
+            if not i['solid']: continue
 
-              i = base.tileCoords[str(int(tilePos[0]) + x) + "_" + str(int(tilePos[1]) + y) + "_" + str(int(tilePos[2]) + z)]
+            # Below
 
-              if not i['solid']: continue
+            if i['pos'][0] == tilePos[0] and i['pos'][1] == tilePos[1] and i['pos'][2] == tilePos[2] - 1:
+              vel[2] = .08
+              self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
+              self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - 1.0 )
 
-              # Below
-              if i['pos'][0] == tilePos[0] and i['pos'][1] == tilePos[1] and i['pos'][2] == tilePos[2] - 1:
-                vel[2] = .08
-                self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
-                self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - 1.0 )
-
-                if not self.isOnGround:
-                
-                  # Show Landing Cloud
-                  dpos = self.actor.getPos()
-                  dpos[2] -= (self.dimensions[2] * 2.0)
-
-                  self.land_cloud.setPos(dpos)
-                  self.land_cloud.show()
-                  self.land_cloud.setScale(1)
-                  self.land_cloud.setTwoSided(True)
-                  self.land_cloud.setColorScale((1,1,1,1))
-
-                  lerp2 = Parallel(
-                    LerpColorScaleInterval(self.land_cloud, .4, (1,1,1,0)),
-                    LerpScaleInterval(self.land_cloud, .5, (3,3,3)) 
-                  )
-
-                  lerp2.start()                  
-
-                self.isOnGround = True
+              if not self.isOnGround:
               
-              elif self.colWithTile(i['pos'] * 2.0):
+                # Show Landing Cloud
+                dpos = self.actor.getPos()
+                dpos[2] -= (self.dimensions[2] * 2.0)
 
-                isTileCol = True
+                self.land_cloud.setPos(dpos)
+                self.land_cloud.show()
+                self.land_cloud.setScale(1)
+                self.land_cloud.setTwoSided(True)
+                self.land_cloud.setColorScale((1,1,1,1))
 
-                if not i['id'] == 2 and self.noCollide == 1: continue
+                lerp2 = Parallel(
+                  LerpColorScaleInterval(self.land_cloud, .4, (1,1,1,0)),
+                  LerpScaleInterval(self.land_cloud, .5, (3,3,3)) 
+                )
 
-                self.isOnGround = False  
+                lerp2.start()                  
 
-                self.ode_body.setPosition(self.noTilePos[0] * 2.0, self.noTilePos[1] * 2.0, self.ode_body.getPosition()[2])
-                force = [0,0,0]
-                vel = [0,0,0]
+              self.isOnGround = True
+            
+            elif self.colWithTile(i['pos'] * 2.0):
 
-                for x in range(len(self.moveVal)):
-                  if (i['pos'][x] * 2.0) - pos[x] < 0:                     
-                    if vel[x] <= 0:
-                      vel[x] = 2.0
-                    
-                  else:
-                    if vel[x] > 0:
-                      vel[x] = -2.0
+              isTileCol = True
 
-                
+              if not i['id'] == 2 and self.noCollide == 1: continue
 
-            # Fall off the side
-            if pos[2] < -30:
-			#if pos[2] < -10:
-              if not self.isDead:
-                lerpMe = LerpColorScaleInterval(self.actor, .5, (1,1,1,0))
-                lerpMe.start()
+              self.isOnGround = False  
 
-                self.ode_body.setLinearVel( (0,0,0) )
+              self.ode_body.setPosition(self.noTilePos[0] * 2.0, self.noTilePos[1] * 2.0, self.ode_body.getPosition()[2])
+              force = [0,0,0]
+              vel = [0,0,0]
 
-                self.resist = self.maxResist     
-                messenger.send("Player_" + str(self.id) + "_Resist_UpdateHud")
-                self.noReduce(.75)
-                self.moveLock(None, 1.25)
+              for x in range(len(self.moveVal)):
+                if (i['pos'][x] * 2.0) - pos[x] < 0:                     
+                  if vel[x] <= 0:
+                    vel[x] = 2.0
+                  
+                else:
+                  if vel[x] > 0:
+                    vel[x] = -2.0
 
-                taskMgr.doMethodLater(.6, self.ode_body.setPosition, "Player_" + str(self.id) + "_FallResetPosition", extraArgs=[self.startPos[0], self.startPos[1], self.startPos[2] + 4], sort=1)
-                taskMgr.doMethodLater(.6, self.actor.setColorScale, "Player_" + str(self.id) + "_FallReappear", extraArgs=[(1,1,1,1)], sort=2)
-                taskMgr.doMethodLater(.65, self.particlePlay, "Player_" + str(self.id) + "_FallPoof", extraArgs=['diesplosion', 1.5], sort=3)
+      # Fall off the side
+      if pos[2] < -30:
+        if not self.isDead:
+          lerpMe = LerpColorScaleInterval(self.actor, .5, (1,1,1,0))
+          lerpMe.start()
 
-              self.isDead = True
-              vel[2] = 0
-              force[2] = 0
-            else:
-              self.isDead = False
+          self.ode_body.setLinearVel( (0,0,0) )
 
+          self.resist = self.maxResist     
+          messenger.send("Player_" + str(self.id) + "_Resist_UpdateHud")
+          self.noReduce(.75)
+          self.moveLock(None, 1.25)
 
-            # ODE Player Collision
-            for i in base.players:
-              if i == self: continue
-              if i.noCollide == 1 or self.noCollide == 1 or i.noCollide == self or self.noCollide == i: continue
+          taskMgr.doMethodLater(.6, self.ode_body.setPosition, "Player_" + str(self.id) + "_FallResetPosition", extraArgs=[self.startPos[0], self.startPos[1], self.startPos[2] + 4], sort=1)
+          taskMgr.doMethodLater(.6, self.actor.setColorScale, "Player_" + str(self.id) + "_FallReappear", extraArgs=[(1,1,1,1)], sort=2)
+          taskMgr.doMethodLater(.65, self.particlePlay, "Player_" + str(self.id) + "_FallPoof", extraArgs=['diesplosion', 1.5], sort=3)
 
-              tPos = i.actor.getPos()
-              myPos = self.actor.getPos()
-
-              # If this character collides with another...
-              if self.colWithNode(i.actor, i.dimensions):
- 
-                # Get the velocities of both characters
-                myVel = vel
-                eneVel = i.ode_body.getLinearVel()
-
-                # Determine how power and resist should affect this collision
-                myPower = self.power - (i.resist)
-                enePower = i.power - (self.resist)
-
-                # Set velocities.
-                for x in range(2):
-                  myVel[x] += myPower * self.moveVal[x]
-                  eneVel[x] += enePower * i.moveVal[x]
-
-                # Move Special
-                if self.moveSpecial:
-                  eneVel = Vec3(0,0,0)
-                
-                if i.moveSpecial:
-                  myVel = Vec3(0,0,0)
+        self.isDead = True
+        vel[2] = 0
+        force[2] = 0
+      else:
+        self.isDead = False
 
 
-                vel = eneVel
-                i.ode_body.setLinearVel(myVel)
+      # ODE Player Collision
+      for i in base.players:
+        if i == self: continue
+        if i.noCollide == 1 or self.noCollide == 1 or i.noCollide == self or self.noCollide == i: continue
 
-                # Reduce Reduce
-                if abs(myVel[0]) > 5.0 or abs(myVel[1]) > 5.0:
-                  i.reduceResist()
-                  i.aiLockTarget()
+        tPos = i.actor.getPos()
+        myPos = self.actor.getPos()
 
-                if abs(eneVel[0]) > 5.0 or abs(eneVel[1]) > 5.0:
-                  self.reduceResist()
-                  self.aiLockTarget()
+        # If this character collides with another...
+        if self.colWithNode(i.actor, i.dimensions):
 
-                # Sound FX
-                self.sfx['bump'].play()
+          # Get the velocities of both characters
+          myVel = vel
+          eneVel = i.ode_body.getLinearVel()
 
-                # Particle FX
-                self.particlePlay('stars', .15)
+          # Determine how power and resist should affect this collision
+          myPower = self.power - (i.resist)
+          enePower = i.power - (self.resist)
 
-                # Knockback
-                self.knockback()
-                i.knockback()                
+          # Set velocities.
+          for x in range(2):
+            myVel[x] += myPower * self.moveVal[x]
+            eneVel[x] += enePower * i.moveVal[x]
 
-                # Flag characters to not accept collisions from each other for the next .5 seconds
-                self.setNoCollide(.5, i)
-                i.setNoCollide(.5, self)
+          # Move Special
+          if self.moveSpecial:
+            eneVel = Vec3(0,0,0)
+          
+          if i.moveSpecial:
+            myVel = Vec3(0,0,0)
+
+
+          vel = eneVel
+          i.ode_body.setLinearVel(VBase3(myVel[0], myVel[1], myVel[2]) )
+
+          # Reduce Reduce
+          if abs(myVel[0]) > 5.0 or abs(myVel[1]) > 5.0:
+            i.reduceResist()
+
+          if abs(eneVel[0]) > 5.0 or abs(eneVel[1]) > 5.0:
+            self.reduceResist()
+
+          # Sound FX
+          self.sfx['bump'].play()
+
+          # Particle FX
+          self.particlePlay('stars', .15)
+
+          # Knockback
+          self.knockback()
+          i.knockback()                
+
+          # Flag characters to not accept collisions from each other for the next .5 seconds
+          self.setNoCollide(.5, i)
+          i.setNoCollide(.5, self)
 
       if not isTileCol:
         self.noTilePos = self.getTilePos()        

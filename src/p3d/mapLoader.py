@@ -101,6 +101,26 @@ class mapLoader:
         # Load Block
         self.loadTileBlock(bId, [x, y])
 
+    base.mapSize = (size[0], size[1])
+    base.mapData = []
+    for x in range(size[0]):
+      for y in range(size[1]):
+        if (int(x), int(y), 0) in base.tileCoords:
+          tile = base.tileCoords[ (int(x), int(y), 0) ]
+          if tile['solid']:
+            if tile['pickup']:
+              base.mapData.append(2)
+              continue
+              
+            base.mapData.append(-1)
+            continue
+        if not (int(x), int(y), -1) in base.tileCoords:
+          base.mapData.append(-1)
+          continue
+
+        base.mapData.append(1)
+           
+
     self.staticMesh.flattenStrong()
 
   def loadTileBlock(self, bId, pos):
@@ -201,7 +221,8 @@ class mapLoader:
           'node'  : m
         })
 
-        base.tileCoords[str(int(tilePos[0])) + "_" + str(int(tilePos[1])) + "_" + str(int(tilePos[2]))] = base.tilePositions[len(base.tilePositions) - 1] 
+        base.tileCoords[(int(tilePos[0]), int(tilePos[1]), int(tilePos[2]))] = base.tilePositions[len(base.tilePositions) - 1] 
+
 
         # Reparent Model
         if static: m.reparentTo(layerNode)
