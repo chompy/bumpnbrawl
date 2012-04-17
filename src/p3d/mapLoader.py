@@ -54,11 +54,12 @@ class mapLoader:
 
       bg = CardMaker("Map_Background")
       bg.setFrame(-1,1,-1, 1)
-      bg_node = base.camera.attachNewNode(bg.generate())
+      bg_node = render2dp.attachNewNode(bg.generate())
+      base.cam2dp.node().getDisplayRegion(0).setSort(-20)
       bg_node.setTexture(backgroundTex)
       bg_node.setBillboardPointWorld()
-      bg_node.setScale(5)
-      bg_node.setZ(-50)
+      bg_node.setScale(1.6)
+      bg_node.setZ(0)
 
       base.background = bg_node   
       

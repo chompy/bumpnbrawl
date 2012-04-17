@@ -33,7 +33,7 @@ class specials(actions.actions):
     else:
       self.player.isKnockback = False
       if self.player.movement == [0,0]:
-        self.player.setMovement(self.player.power * .75, True, False)
+        self.player.setMovement(self.player.power * 1.0, True, False)
 		#self.player.setMovement(self.player.power * 1.25, True, False)
       return task.done
 
