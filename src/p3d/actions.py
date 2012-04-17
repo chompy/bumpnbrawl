@@ -70,6 +70,19 @@ class actions:
         if x == self.player: continue
         if x.getTilePos() == testPos or x.getTilePos() == tilepos:
 
+          # If player trying to be picked up is holding something cancel
+          if x.actions.pickupObj:
+            return None
+
+          # If opponent is already held cancel.
+          if x.isHeld:
+            return None
+
+          # If opponent is moving then shouldn't be able to pick them up
+          vel = x.ode_body.getLinearVel()
+          if abs(vel[0]) > 1.0 or abs(vel[1]) > 1.0:
+            return None
+
           # Remove enemy move loop
           taskMgr.remove("Player_" + str(x.id) + "_MoveLoop")
           x.isOnGround = False

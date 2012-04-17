@@ -114,7 +114,7 @@ class ChompinBomper(ShowBase):
     base.playerid = 0
     base.players = []
     base.players.append(player.player(character, True, 1))
-    base.players.append(player.player("chompy", False, None))
+    base.players.append(player.player("renoki", False, None))
     base.players.append(player.player("hawk", False, None))
     base.players.append(player.player("chompy", False, None))   
 

@@ -481,7 +481,11 @@ class player:
 
           # Knockback
           self.knockback()
-          i.knockback()                
+          i.knockback()   
+
+          # Drop object
+          self.actions.drop()
+          i.actions.drop()             
 
           # Flag characters to not accept collisions from each other for the next .5 seconds
           self.setNoCollide(.5, i)
@@ -773,15 +777,17 @@ class player:
     Give the player a chance to break free from being picked up.
     """
 
-
-    moveKeys = [[0,1], [1,0], [0,-1], [-1,0]]
+    moveKeys = [[1,0], [-1,0]]
 
     # To break free player must press the direction keys in a sequence...
-    if self.kbVal == moveKeys[self.breakFreeCt % 4]:
+    if self.kbVal == moveKeys[self.breakFreeCt % 2]:
       self.breakFreeCt -= 1
       if self.breakFreeCt <= 0:
         self.heldBy.actions.drop(1.0)
         return task.done
+
+    if taskMgr.getTasksMatching("Player_" + str(self.id) + "_MoveLoop"):
+      return task.done
       
     return task.cont
 

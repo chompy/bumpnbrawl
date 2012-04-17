@@ -19,6 +19,7 @@ class ai:
     self.cells = []
     self.pathCt = 0
     self.persueEnd = None
+    self.persueTarget = "player"
 
 
     self.astar = AStar.AStar(AStar.SQ_MapHandler(base.mapData,base.mapSize[0],base.mapSize[1]))
@@ -41,8 +42,6 @@ class ai:
     # Find something to persue
     if not self.persue:
       self.aiLockTarget()
-      if self.persue:
-        self.persueEnd = self.persue.getTilePos()
 
     if not self.persue: return task.cont
 
@@ -50,30 +49,84 @@ class ai:
     if tilePos == Point3(0,0,0):
       return task.cont
 
-    if not self.hasPath or not self.persue.getTilePos() == self.persueEnd: 
-      self.findPath()
-      self.pathCt = 0
-
     # Follow player, watch out for obstables (no pathfinding)
-    enePos = self.persue.getTilePos()
+    try:
+      enePos = self.persue.getTilePos()
+    except:
+      enePos = self.persue
+      
     x = enePos[0] - tilePos[0]
     y = enePos[1] - tilePos[1]
-
     hasDir = False
     if x > 0 and not self.isObstacle([1,0]): self.aiDir = [1, 0]
     elif x < 0 and not self.isObstacle([-1,0]): self.aiDir = [-1, 0]
     elif y > 0 and not self.isObstacle([0,1]): self.aiDir = [0, 1]
     elif y < 0 and not self.isObstacle([0,-1]): self.aiDir = [0, -1]
     else:
+      hasDir = False
       for x in range(-1, 1):
         for y in range(-1, 1):
           if not self.isObstacle([x, y]):
             self.aiDir = [x, y]
+            hasDir = True
             break
+        if hasDir: break
 
+    # Remove Pit Persue Target
+    if not self.player.actions.pickupObj and self.persueTarget == "pit":
+      self.persueTarget = "player"
+      self.persue = None
+      return task.cont
+
+    # Try picking up
+    if (int(tilePos[0]) + self.aiDir[0], int(tilePos[1]) + self.aiDir[1], int(tilePos[2])) in base.tileCoords:
+      tile = base.tileCoords[( int(tilePos[0]) + self.aiDir[0], int(tilePos[1]) + self.aiDir[1], int(tilePos[2]))]
+      if tile['pickup'] and tile['solid']:
+        if not self.player.actions.pickupObj:
+          self.player.actions.pickup()
+          self.aiDir = [0,0]
+          taskMgr.doMethodLater(.75, self.player.actions.pickup, "Player_" + str(self.player.id) + "_AI_DropObject", extraArgs=[])
+
+    # Pickup a player.
+    if self.persueTarget == "player":
+      for i in base.players:
+        if i == self.player: continue
+        enePos = i.getTilePos()
+        if (tilePos[0] + self.aiDir[0], tilePos[1] + self.aiDir[1]) == (enePos[0], enePos[1]):
+          if not self.player.actions.pickupObj and random.randint(1,3) == 1:
+            self.aiDir = [0,0]
+            self.player.actions.pickup()
+
+            if self.player.actions.pickupObj:
+              pit = self.findNearbyPit()
+              if pit:
+                self.persue = pit
+                self.persueTarget = "pit"
+              return task.cont
 
     self.player.setMoveVal([.1,.1])
-    if self.player.isOnGround:
+
+    # Throw player at pit
+    if self.persueTarget == "pit" and self.player.actions.pickupObj:
+
+      for x in range(-1,1):
+        if x == 0: continue
+        for y in range(-1,1):
+          if y == 0: continue
+          if not (tilePos[0] + x, tilePos[1] + y, -1) in base.tileCoords:
+            self.aiDir = [x,y]
+            self.direction = [x, y]
+            self.player.setMoveVal([0,0])
+            self.player.actions.pickup()      
+            self.aiLockTarget()
+
+    if self.player.actor.getZ() < 0.0:
+      self.aiLockTarget()
+      self.player.actions.drop()
+      self.aiDir = [0,0]
+      return task.cont
+    
+    if self.player.isOnGround and ((self.persueTarget == "player" and not self.persue.actor.getZ() < 0.0) or (self.persueTarget == "pit")):
       self.player.setMoveVal(self.aiDir)
     
     return task.cont
@@ -144,6 +197,11 @@ class ai:
     # Solid Wall
     if (tilePos[0] + direction[0], tilePos[1] + direction[1], tilePos[2]) in base.tileCoords:
       tile = base.tileCoords[(tilePos[0] + direction[0], tilePos[1] + direction[1], tilePos[2])]
+      if tile['pickup']:
+        if not self.player.actions.pickupObj:
+          return False
+        else:
+          return True
       if tile['solid']:
         return True
 
@@ -162,12 +220,28 @@ class ai:
         return False
 
     return False
+
+  def findNearbyPit(self):
+
+    """
+    Checks to see if pit is nearby.
+    """
+    
+    tilePos = self.player.getTilePos()
+    for x in range(-5, 5):
+      for y in range(-5, 5):
+        if not (tilePos[0] + x, tilePos[1] + y, -1) in base.tileCoords:
+          return (tilePos[0] + x, tilePos[1] + y)
+
+    return None
     
   def aiLockTarget(self):
 
     """
     Pick a target to persue.
     """
+
+    if not self.persueTarget == "player": return None
   
     target = None
     minDist = 9999
