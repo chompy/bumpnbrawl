@@ -104,6 +104,11 @@ class ChompinBomper(ShowBase):
     Init ze game!
     """
 
+    # Task Chains
+    taskMgr.setupTaskChain('ai_task_chain', numThreads = 1, tickClock = None,
+                           threadPriority = None, frameBudget = None,
+                           frameSync = None, timeslicePriority = None)
+
     # Game Input
     self.input = gameInput.gameInput()
 
@@ -123,9 +128,9 @@ class ChompinBomper(ShowBase):
     base.players[3].activateAi()    
     # Load Camera
     base.gameCam = camera.camera(base.players[0])
-    base.gameCam.add(base.players[1])
-    base.gameCam.add(base.players[2])    
-    base.gameCam.add(base.players[3])    
+    #base.gameCam.add(base.players[1])
+    #base.gameCam.add(base.players[2])    
+    #base.gameCam.add(base.players[3])    
 
     # Game Hud
     self.hud = hud.gameHud()

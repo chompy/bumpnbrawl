@@ -92,7 +92,7 @@ class player:
     for i in range(len(pos1)):
       self.dimensions[i] = (pos2[i] - pos1[i]) * scale
 
-    self.dimensions = [1.6,1.0,1.0]
+    self.dimensions = [1.25,1.25,1.0]
 
     # Load 3D Sounds
     #self.audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0], camera)
@@ -348,64 +348,66 @@ class player:
       pos = self.ode_body.getPosition()
 
       isTileCol = False
-      for x in range(-2,2):
-        for y in range(-2,2):
-          for z in range(-2,1):
+
+      # Get Dir based on Vel
+      x = 0
+      y = 0
+      if vel[0] > 0: x = 1
+      elif vel[0] < 0: x = -1
+      else: x = 0
+
+      if vel[1] > 0: y = 1
+      elif vel[1] < 0: y = -1
+      else: y = 0    
+      posDown = (int(tilePos[0]), int(tilePos[1]), int(tilePos[2]) - 1) 
+
+      # Land on Tile
+      if posDown in base.tileCoords:
+        tile = base.tileCoords[posDown]
+        if tile['solid']:
+
+          # Set position to the top of bellow tile
+          self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
+          self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - 1.0 )      
+          vel[2] = .08       
+
+          # If wasn't previously on the ground show landing cloud object.
+          if not self.isOnGround:
           
-            try:
-              i = base.tileCoords[(int(tilePos[0]) + x, int(tilePos[1]) + y, int(tilePos[2]) + z)]
-            except KeyError: continue
+            # Show Landing Cloud
+            dpos = self.actor.getPos()
+            dpos[2] -= (self.dimensions[2] * 2.0)
 
-            if not i['solid']: continue
+            self.land_cloud.setPos(dpos)
+            self.land_cloud.show()
+            self.land_cloud.setScale(1)
+            self.land_cloud.setTwoSided(True)
+            self.land_cloud.setColorScale((1,1,1,1))
 
-            # Below
+            lerp2 = Parallel(
+              LerpColorScaleInterval(self.land_cloud, .4, (1,1,1,0)),
+              LerpScaleInterval(self.land_cloud, .5, (3,3,3)) 
+            )
 
-            if i['pos'][0] == tilePos[0] and i['pos'][1] == tilePos[1] and i['pos'][2] == tilePos[2] - 1:
-              vel[2] = .08
-              self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
-              self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - 1.0 )
+            lerp2.start()                  
 
-              if not self.isOnGround:
-              
-                # Show Landing Cloud
-                dpos = self.actor.getPos()
-                dpos[2] -= (self.dimensions[2] * 2.0)
+          self.isOnGround = True
 
-                self.land_cloud.setPos(dpos)
-                self.land_cloud.show()
-                self.land_cloud.setScale(1)
-                self.land_cloud.setTwoSided(True)
-                self.land_cloud.setColorScale((1,1,1,1))
+      # Side collision
+      posSide = (int(tilePos[0]) , int(tilePos[1]) , int(tilePos[2]))
+      if posSide in base.tileCoords:
+        tile = base.tileCoords[posSide]
+        if tile['solid']:
 
-                lerp2 = Parallel(
-                  LerpColorScaleInterval(self.land_cloud, .4, (1,1,1,0)),
-                  LerpScaleInterval(self.land_cloud, .5, (3,3,3)) 
-                )
 
-                lerp2.start()                  
+          vel[0] = -vel[0] * .8
+          vel[1] = -vel[1] * .8
 
-              self.isOnGround = True
-            
-            elif self.colWithTile(i['pos'] * 2.0):
 
-              isTileCol = True
-
-              if not i['id'] == 2 and self.noCollide == 1: continue
-
-              self.isOnGround = False  
-
-              self.ode_body.setPosition(self.noTilePos[0] * 2.0, self.noTilePos[1] * 2.0, self.ode_body.getPosition()[2])
-              force = [0,0,0]
-              vel = [0,0,0]
-
-              for x in range(len(self.moveVal)):
-                if (i['pos'][x] * 2.0) - pos[x] < 0:                     
-                  if vel[x] <= 0:
-                    vel[x] = 2.0
-                  
-                else:
-                  if vel[x] > 0:
-                    vel[x] = -2.0
+          if x: pos[0] = (tile['pos'][0] - x) * 2.0          
+          if y: pos[1] = (tile['pos'][1] - y) * 2.0
+          self.ode_body.setPosition(pos)
+          self.knockback()
 
       # Fall off the side
       if pos[2] < -30:
@@ -614,7 +616,7 @@ class player:
       pos = self.actor.getPos()
     
     for i in range(len(pos)):
-      pos[i] = int(math.floor( (pos[i] + (self.dimensions[i] / 2.0)) / 2.0))
+      pos[i] = int(math.floor( (pos[i] + self.dimensions[i]) / 2.0))
         #pos[i] = int(math.floor( pos[i] / 2.0))
 
     return pos
@@ -777,17 +779,23 @@ class player:
     Give the player a chance to break free from being picked up.
     """
 
-    moveKeys = [[1,0], [-1,0]]
+    # Bot Break Free
+    if taskMgr.hasTaskNamed("Player_" + str(self.id) + "_AI"):
+      taskMgr.doMethodLater(self.breakFreeCt * .25, self.heldBy.actions.drop, "Player_" + str(self.id) + "_AIBreakFree", extraArgs=[1.0])
 
-    # To break free player must press the direction keys in a sequence...
-    if self.kbVal == moveKeys[self.breakFreeCt % 2]:
-      self.breakFreeCt -= 1
-      if self.breakFreeCt <= 0:
-        self.heldBy.actions.drop(1.0)
+    # Player break free
+    else:
+      moveKeys = [[1,0], [-1,0]]
+
+      # To break free player must press the direction keys in a sequence...
+      if self.kbVal == moveKeys[self.breakFreeCt % 2]:
+        self.breakFreeCt -= 1
+        if self.breakFreeCt <= 0:
+          self.heldBy.actions.drop(1.0)
+          return task.done
+
+      if taskMgr.getTasksMatching("Player_" + str(self.id) + "_MoveLoop"):
         return task.done
-
-    if taskMgr.getTasksMatching("Player_" + str(self.id) + "_MoveLoop"):
-      return task.done
       
     return task.cont
 

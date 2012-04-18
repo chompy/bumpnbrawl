@@ -80,8 +80,11 @@ class actions:
 
           # If opponent is moving then shouldn't be able to pick them up
           vel = x.ode_body.getLinearVel()
-          if abs(vel[0]) > 1.0 or abs(vel[1]) > 1.0:
+          if abs(vel[0]) > 4.0 or abs(vel[1]) > 4.0:
             return None
+
+          self.player.ode_body.setLinearVel( (0,0,0) )
+          self.player.setNoCollide(.5, x)
 
           # Remove enemy move loop
           taskMgr.remove("Player_" + str(x.id) + "_MoveLoop")

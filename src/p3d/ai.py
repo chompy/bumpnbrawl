@@ -1,6 +1,7 @@
 import math,random
 from pandac.PandaModules import Point3
 from lib import AStar
+
 class ai:
 
   def __init__(self, player):
@@ -27,7 +28,7 @@ class ai:
 
     # Start Loop
     taskMgr.add(self.ai, "Player_" + str(self.player.id) + "_AI")
-    taskMgr.doMethodLater(2.5, self.aiLockTarget, "Player_" + str(self.player.id) + "_AI_CheckForNewTarget", extraArgs=[])
+    taskMgr.doMethodLater(2.5, self.aiLockTarget, "Player_" + str(self.player.id) + "_AI_CheckForNewTarget", extraArgs=[], taskChain="ai_task_chain")
 
 
   def ai(self, task = None):
@@ -50,11 +51,8 @@ class ai:
       return task.cont
 
     # Follow player, watch out for obstables (no pathfinding)
-    try:
-      enePos = self.persue.getTilePos()
-    except:
-      enePos = self.persue
-      
+    enePos = self.persue.getTilePos()
+ 
     x = enePos[0] - tilePos[0]
     y = enePos[1] - tilePos[1]
     hasDir = False
@@ -72,53 +70,18 @@ class ai:
             break
         if hasDir: break
 
-    # Remove Pit Persue Target
-    if not self.player.actions.pickupObj and self.persueTarget == "pit":
-      self.persueTarget = "player"
-      self.persue = None
-      return task.cont
-
+  
     # Try picking up
-    if (int(tilePos[0]) + self.aiDir[0], int(tilePos[1]) + self.aiDir[1], int(tilePos[2])) in base.tileCoords:
-      tile = base.tileCoords[( int(tilePos[0]) + self.aiDir[0], int(tilePos[1]) + self.aiDir[1], int(tilePos[2]))]
-      if tile['pickup'] and tile['solid']:
-        if not self.player.actions.pickupObj:
+    if not self.player.actions.pickupObj:    
+      if (int(tilePos[0]) + self.aiDir[0], int(tilePos[1]) + self.aiDir[1], int(tilePos[2])) in base.tileCoords:
+        tile = base.tileCoords[( int(tilePos[0]) + self.aiDir[0], int(tilePos[1]) + self.aiDir[1], int(tilePos[2]))]
+        if tile['pickup'] and tile['solid']:
           self.player.actions.pickup()
           self.aiDir = [0,0]
-          taskMgr.doMethodLater(.75, self.player.actions.pickup, "Player_" + str(self.player.id) + "_AI_DropObject", extraArgs=[])
-
-    # Pickup a player.
-    if self.persueTarget == "player":
-      for i in base.players:
-        if i == self.player: continue
-        enePos = i.getTilePos()
-        if (tilePos[0] + self.aiDir[0], tilePos[1] + self.aiDir[1]) == (enePos[0], enePos[1]):
-          if not self.player.actions.pickupObj and random.randint(1,3) == 1:
-            self.aiDir = [0,0]
-            self.player.actions.pickup()
-
-            if self.player.actions.pickupObj:
-              pit = self.findNearbyPit()
-              if pit:
-                self.persue = pit
-                self.persueTarget = "pit"
-              return task.cont
+          if self.player.actions.pickupObj:          
+            taskMgr.doMethodLater(.75, self.player.actions.pickup, "Player_" + str(self.player.id) + "_AI_DropObject", extraArgs=[])
 
     self.player.setMoveVal([.1,.1])
-
-    # Throw player at pit
-    if self.persueTarget == "pit" and self.player.actions.pickupObj:
-
-      for x in range(-1,1):
-        if x == 0: continue
-        for y in range(-1,1):
-          if y == 0: continue
-          if not (tilePos[0] + x, tilePos[1] + y, -1) in base.tileCoords:
-            self.aiDir = [x,y]
-            self.direction = [x, y]
-            self.player.setMoveVal([0,0])
-            self.player.actions.pickup()      
-            self.aiLockTarget()
 
     if self.player.actor.getZ() < 0.0:
       self.aiLockTarget()
@@ -126,16 +89,15 @@ class ai:
       self.aiDir = [0,0]
       return task.cont
     
-    if self.player.isOnGround and ((self.persueTarget == "player" and not self.persue.actor.getZ() < 0.0) or (self.persueTarget == "pit")):
+    if self.player.isOnGround and self.persue and not self.persue.actor.getZ() < 0.0:
       self.player.setMoveVal(self.aiDir)
     
     return task.cont
 
 
-  def findPath(self):
+  def findPath(self, endPos):
 
     startPos = self.player.getTilePos()
-    endPos = self.persue.getTilePos()
 
     start = AStar.SQ_Location(int(startPos[0]),int(startPos[1]))
     end = AStar.SQ_Location(int(endPos[0]), int(endPos[1]))
