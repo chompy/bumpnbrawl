@@ -1,5 +1,6 @@
 from direct.actor.Actor import Actor
 from pandac.PandaModules import Texture, Camera, NodePath, OrthographicLens, TransparencyAttrib, CardMaker, TextureStage, Vec3, VBase3
+from direct.gui.OnscreenText import OnscreenText,TextNode 
 from direct.particles.ParticleEffect import ParticleEffect
 from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosInterval,LerpScaleInterval
 from direct.interval.IntervalGlobal import *
@@ -223,7 +224,7 @@ class player:
     
     self.i = basePolling.Interface()
 
-    taskMgr.add(self.moveLoop, "Player_" + str(self.id) + "_MoveLoop")   
+    taskMgr.doMethodLater(1.5, self.moveLoop, "Player_" + str(self.id) + "_MoveLoop")   
 
     # Misc Models
     self.dash_cloud = loader.loadModel(base.assetPath + "/misc_models/dash_cloud." + base.charExt )
@@ -236,6 +237,19 @@ class player:
     self.land_cloud.setTransparency(TransparencyAttrib.MAlpha)
     self.land_cloud.setTwoSided(True)
     self.land_cloud.hide()
+
+    # +1 Text
+    self.getKill = OnscreenText("+1",1,fg=(1,0,0,1),pos=(0,2),align=TextNode.ACenter,scale=1.0 / self.actor.getScale()[0],mayChange=1, parent=self.actor) 
+    self.getKill.setBillboardPointWorld()
+    self.getKill.hide()
+
+    self.killLerp = Parallel(
+      LerpPosInterval(self.getKill, 1.5, (0,0,2), (0,0,0)),
+      LerpColorScaleInterval(self.getKill, 1.5, (1,1,1,0), (1,1,1,1))
+    )
+
+    self.killCount = 0
+    self.lastHit = None
   
     # Begin Animation
     self.setAnim(self.animDefault, True)
@@ -394,6 +408,11 @@ class player:
           self.isOnGround = True
 
       # Side collision
+      testPos = self.ode_body.getPosition()
+      testPos[0] += (x)
+      testPos[1] += (y)
+
+      tilePos = self.getTilePos(testPos)
       posSide = (int(tilePos[0]) , int(tilePos[1]) , int(tilePos[2]))
       if posSide in base.tileCoords:
         tile = base.tileCoords[posSide]
@@ -425,6 +444,11 @@ class player:
           taskMgr.doMethodLater(.6, self.ode_body.setPosition, "Player_" + str(self.id) + "_FallResetPosition", extraArgs=[self.startPos[0], self.startPos[1], self.startPos[2] + 4], sort=1)
           taskMgr.doMethodLater(.6, self.actor.setColorScale, "Player_" + str(self.id) + "_FallReappear", extraArgs=[(1,1,1,1)], sort=2)
           taskMgr.doMethodLater(.65, self.particlePlay, "Player_" + str(self.id) + "_FallPoof", extraArgs=['diesplosion', 1.5], sort=3)
+
+          # Give the last person to hit a kill.
+          if self.lastHit:
+            self.lastHit.increaseKillCount()
+            self.lastHit = None
 
         self.isDead = True
         vel[2] = 0
@@ -471,9 +495,11 @@ class player:
           # Reduce Reduce
           if abs(myVel[0]) > 5.0 or abs(myVel[1]) > 5.0:
             i.reduceResist()
+            i.lastHit = self
 
           if abs(eneVel[0]) > 5.0 or abs(eneVel[1]) > 5.0:
             self.reduceResist()
+            self.lastHit = i
 
           # Sound FX
           self.sfx['bump'].play()
@@ -854,6 +880,16 @@ class player:
 
     if doReturn:
       return p
+
+  def increaseKillCount(self):
+
+    """
+    Increase player kill counter, show indication.
+    """
+
+    self.killCount += 1
+    self.getKill.show()
+    self.killLerp.start()
 
   def networkPosition(self, task = None):
 

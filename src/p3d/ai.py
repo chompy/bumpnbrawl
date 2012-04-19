@@ -81,6 +81,8 @@ class ai:
           if self.player.actions.pickupObj:          
             taskMgr.doMethodLater(.75, self.player.actions.pickup, "Player_" + str(self.player.id) + "_AI_DropObject", extraArgs=[])
 
+    # Use a special if needed
+
     self.player.setMoveVal([.1,.1])
 
     if self.player.actor.getZ() < 0.0:

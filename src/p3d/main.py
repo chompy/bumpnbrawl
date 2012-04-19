@@ -19,6 +19,7 @@ import mapLoader, player, camera, hud, gameInput, network
 import direct.directbase.DirectStart
 from direct.showbase.ShowBase import ShowBase
 
+
 # Background
 base.background = None
 
@@ -128,9 +129,9 @@ class ChompinBomper(ShowBase):
     base.players[3].activateAi()    
     # Load Camera
     base.gameCam = camera.camera(base.players[0])
-    #base.gameCam.add(base.players[1])
-    #base.gameCam.add(base.players[2])    
-    #base.gameCam.add(base.players[3])    
+    base.gameCam.add(base.players[1])
+    base.gameCam.add(base.players[2])    
+    base.gameCam.add(base.players[3])    
 
     # Game Hud
     self.hud = hud.gameHud()
