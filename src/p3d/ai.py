@@ -71,16 +71,6 @@ class ai:
         if hasDir: break
 
   
-    # Try picking up
-    if not self.player.actions.pickupObj:    
-      if (int(tilePos[0]) + self.aiDir[0], int(tilePos[1]) + self.aiDir[1], int(tilePos[2])) in base.tileCoords:
-        tile = base.tileCoords[( int(tilePos[0]) + self.aiDir[0], int(tilePos[1]) + self.aiDir[1], int(tilePos[2]))]
-        if tile['pickup'] and tile['solid']:
-          self.player.actions.pickup()
-          self.aiDir = [0,0]
-          if self.player.actions.pickupObj:          
-            taskMgr.doMethodLater(.75, self.player.actions.pickup, "Player_" + str(self.player.id) + "_AI_DropObject", extraArgs=[])
-
     # Persuer falls off
     if self.persue and self.persue.actor.getZ() < 0.0:
       self.aiLockTarget()
@@ -234,11 +224,8 @@ class ai:
     # Solid Wall
     if (tilePos[0] + direction[0], tilePos[1] + direction[1], tilePos[2]) in base.tileCoords:
       tile = base.tileCoords[(tilePos[0] + direction[0], tilePos[1] + direction[1], tilePos[2])]
-      if tile['pickup']:
-        if not self.player.actions.pickupObj:
-          return False
-        else:
-          return True
+      if tile['destructable']:
+        return False
       if tile['solid']:
         return True
 

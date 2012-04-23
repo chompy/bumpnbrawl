@@ -201,7 +201,7 @@ class player:
       base.accept("p" + self.controls + "_left-up", self.setMoveVal, [[.1,0]])
       base.accept("p" + self.controls + "_right-up", self.setMoveVal, [[.1,0]])
       
-      base.accept("p" + self.controls + "_btna", self.actions.pickup)
+      base.accept("p" + self.controls + "_btna", self.actions.jump)
       base.accept("p" + self.controls + "_btnb", self.actions.useSpecial)   
 
       # Position Send
@@ -381,31 +381,34 @@ class player:
         if tile['solid']:
 
           # Set position to the top of bellow tile
-          self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
-          self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - 1.0 )      
-          vel[2] = .08       
+          vel = self.ode_body.getLinearVel()
 
-          # If wasn't previously on the ground show landing cloud object.
-          if not self.isOnGround:
-          
-            # Show Landing Cloud
-            dpos = self.actor.getPos()
-            dpos[2] -= (self.dimensions[2] * 2.0)
+          if vel[2] < 0:
+            self.ode_body.setPosition(pos[0], pos[1], tilePos[2] * 2.0)
+            self.shadow_node.setFluidZ( (tilePos[2] * 2.0) - 1.0 )      
+            vel[2] = .08       
 
-            self.land_cloud.setPos(dpos)
-            self.land_cloud.show()
-            self.land_cloud.setScale(1)
-            self.land_cloud.setTwoSided(True)
-            self.land_cloud.setColorScale((1,1,1,1))
+            # If wasn't previously on the ground show landing cloud object.
+            if not self.isOnGround:
+            
+              # Show Landing Cloud
+              dpos = self.actor.getPos()
+              dpos[2] -= (self.dimensions[2] * 2.0)
 
-            lerp2 = Parallel(
-              LerpColorScaleInterval(self.land_cloud, .4, (1,1,1,0)),
-              LerpScaleInterval(self.land_cloud, .5, (3,3,3)) 
-            )
+              self.land_cloud.setPos(dpos)
+              self.land_cloud.show()
+              self.land_cloud.setScale(1)
+              self.land_cloud.setTwoSided(True)
+              self.land_cloud.setColorScale((1,1,1,1))
 
-            lerp2.start()                  
+              lerp2 = Parallel(
+                LerpColorScaleInterval(self.land_cloud, .4, (1,1,1,0)),
+                LerpScaleInterval(self.land_cloud, .5, (3,3,3)) 
+              )
 
-          self.isOnGround = True
+              lerp2.start()                  
+
+            self.isOnGround = True
 
       # Side collision
       testPos = self.ode_body.getPosition()
@@ -418,15 +421,16 @@ class player:
         tile = base.tileCoords[posSide]
         if tile['solid']:
 
-
           vel[0] = -vel[0] * .8
           vel[1] = -vel[1] * .8
-
 
           if x: pos[0] = (tile['pos'][0] - x) * 2.0          
           if y: pos[1] = (tile['pos'][1] - y) * 2.0
           self.ode_body.setPosition(pos)
           self.knockback()
+
+          if tile['destructable']:
+            self.actions.breakDestructable(tile)
 
       # Fall off the side
       if pos[2] < -30:

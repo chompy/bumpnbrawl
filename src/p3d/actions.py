@@ -1,7 +1,7 @@
+from direct.interval.IntervalGlobal import *
 from direct.interval.ProjectileInterval import ProjectileInterval
-from direct.interval.LerpInterval import LerpScaleInterval
-from direct.interval.LerpInterval import LerpPosInterval
-from pandac.PandaModules import Point3
+from direct.interval.LerpInterval import LerpScaleInterval, LerpPosInterval, LerpColorScaleInterval
+from pandac.PandaModules import Point3, TransparencyAttrib, TextureStage
 import math
 
 class actions:
@@ -50,7 +50,7 @@ class actions:
     self.player.isMove = [False, False]
 
     for x in base.tilePositions:
-      if not x['pickup']: continue
+      if not x['destructable']: continue
       if not x['solid']: continue
       if tilepos == x['pos'] or tilepos2 == x['pos']:
         x['solid'] = 0
@@ -339,6 +339,117 @@ class actions:
     function = getattr(self, self.player.character + "_special")
     function()    
 
+  def jump(self):
+
+    """
+    Makes the player jump.
+    """
+
+    if self.player.isOnGround:
+      vel = self.player.ode_body.getLinearVel()
+      vel[2] = 7.5
+      self.player.ode_body.setLinearVel(vel)
+      self.player.isOnGround = False
+
+  def breakDestructable(self, tile):      
+
+    """
+    Break a destructable tile.
+    """
+
+    # If tile isn't destructable then don't break it.
+    if not tile['destructable']: return None
+
+    # Setup array for storing breaking values
+    HITS_TO_BREAK = 2
+    try:
+      base.breakVal
+    except:
+      base.breakVal = {}
+
+    # Get player speed, faster speeds count as more breaks
+    vel = self.player.ode_body.getLinearVel()
+    breakVal = 1
+
+    if abs(vel[0]) < 5.0 and abs(vel[1]) < 5.0: breakVal = 0
+    if abs(vel[0]) > 9.0 or abs(vel[1]) > 9.0: breakVal = 2
+
+    # Lower break counter
+    try:
+      base.breakVal[tile['node']] -= breakVal
+    except:
+      base.breakVal[tile['node']] = HITS_TO_BREAK - breakVal
+
       
+    # Stop player from moving.
+    self.player.ode_body.setLinearVel((0,0,0))
+
+
+    # If break counter isn't 0 then make then add a 'breaking' decal to the box
+    if base.breakVal[tile['node']] > 0:
+      if breakVal and base.breakVal[tile['node']] == HITS_TO_BREAK - breakVal and tile['destruct_texture']:
+        ts = TextureStage('Tile_' + str(tile['id']) + '_TextureStage')
+        ts.setMode(TextureStage.MDecal)
+        ts.setSort(1)
+        tile['node'].setTexture(ts, tile['destruct_texture'])  
+
+        # Setup an event that will allow us to clear the decal later.
+        base.accept("destructable_" + str(tile['node']) + "_clearDecal", tile['node'].clearTexture, [ts])
+
+      return True
+
+    else:
+
+      # Reset Break Counter
+      base.breakVal[tile['node']] = HITS_TO_BREAK
+
+      # Make four copies
+      tileCopy = []
+      for i in range(4):
+        tileCopy.append(tile['node'].copyTo(base.mapNode))
+        tileCopy[i].setScale(.4)
+        tileCopy[i].setTransparency(TransparencyAttrib.MAlpha)
+
+        # Projectile Lerp
+        vel = (0,0,1)
+        if i == 0: vel = (-1,1,9)
+        elif i == 1: vel = (1,1,9)
+        elif i == 2: vel = (-1,-1,9)
+        elif i == 3: vel = (1,-1,9)      
+        
+        lerp = Parallel(
+          ProjectileInterval(tileCopy[i], duration = .75, startVel=vel),
+          LerpColorScaleInterval(tileCopy[i], .75, (1,1,1,0))
+        )
+        lerp.start()
+
+        taskMgr.doMethodLater(1.0, tileCopy[i].removeNode, "Player_" + str(self.player.id) + "_BreakDestructableCleanup", extraArgs=[])
+
+      # Hide original tile, make it 
+      tile['node'].hide()
+      tile['solid'] = False
+
+      taskMgr.doMethodLater(10.0, self.restoreDestructable, "Player_" + str(self.player.id) + "_RestoreDestructableBlock", extraArgs=[tile])
+
+      # Play SFX
+      self.player.sfx['destructable'].play()
+
+  def restoreDestructable(self, tile):
+
+    """
+    Restores a destructable block.
+    """
+
+    if tile['solid'] or not tile['destructable']: return None
+
+    messenger.send("destructable_" + str(tile['node']) + "_clearDecal")
+    base.ignore("destructable_" + str(tile['node']) + "_clearDecal")
+
+    tile['node'].show()
+    tile['solid'] = True
+    tile['node'].setTransparency(TransparencyAttrib.MAlpha)
+    lerp = LerpColorScaleInterval(tile['node'], .75, (1,1,1,1), startColorScale=(1,1,1,0))
+    lerp.start()
+        
 
     

@@ -31,6 +31,7 @@ class mapLoader:
     self.node = NodePath("Map")
     self.node.setZ(-.2)
     self.node.reparentTo(render)
+    base.mapNode = self.node
 
     self.staticMesh = NodePath("StaticMap")
     self.staticMesh.reparentTo(self.node)
@@ -109,7 +110,7 @@ class mapLoader:
         if (int(x), int(y), 0) in base.tileCoords:
           tile = base.tileCoords[ (int(x), int(y), 0) ]
           if tile['solid']:
-            if tile['pickup']:
+            if tile['destructable']:
               base.mapData.append(2)
               continue
               
@@ -172,11 +173,19 @@ class mapLoader:
       except:
         invisible = False
 
-      # Pickup-able
+      # Destructable
       try:
-        pickup = self.tileData.getboolean(str(bId), "pickup")
+        destruct = self.tileData.getboolean(str(bId), "destructable")
       except:
-        pickup = False
+        destruct = False
+
+      # Destructable Cracked Texture
+      dTexPath = base.assetPath + "/tiles/themes/" + self.theme + "/" + str(bId) + "_break.png"
+      
+      if os.path.exists(dTexPath):
+        dTex = loader.loadTexture(dTexPath)
+      else:
+        dTex = None
 
       if overlap > 0:
         self.loadTileBlock(overlap, pos)
@@ -218,7 +227,8 @@ class mapLoader:
           'pos'   : tilePos,
           'solid' : solid,
           'static': static,
-          'pickup': pickup,
+          'destructable': destruct,
+          'destruct_texture': dTex,
           'node'  : m
         })
 
