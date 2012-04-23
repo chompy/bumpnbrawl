@@ -28,7 +28,7 @@ class ai:
 
     # Start Loop
     taskMgr.add(self.ai, "Player_" + str(self.player.id) + "_AI")
-    taskMgr.doMethodLater(2.5, self.aiLockTarget, "Player_" + str(self.player.id) + "_AI_CheckForNewTarget", extraArgs=[], taskChain="ai_task_chain")
+    taskMgr.doMethodLater(2.5, self.aiLockTarget, "Player_" + str(self.player.id) + "_AI_CheckForNewTarget")
 
 
   def ai(self, task = None):
@@ -81,7 +81,80 @@ class ai:
           if self.player.actions.pickupObj:          
             taskMgr.doMethodLater(.75, self.player.actions.pickup, "Player_" + str(self.player.id) + "_AI_DropObject", extraArgs=[])
 
-    # Use a special if needed
+    # Persuer falls off
+    if self.persue and self.persue.actor.getZ() < 0.0:
+      self.aiLockTarget()
+
+    # Use Special
+
+    # Offensive Special
+    if self.player.special_type == "offense" and self.persue and not self.player.specialCooldown:
+      eneTile = self.persue.getTilePos()
+
+      for x in range(0,1):
+        if eneTile[x] == tilePos[x]:
+          if x == 0: y = 1
+          else: y = 0
+          
+          if abs(eneTile[y] - tilePos[y]) < self.player.special_range and abs(eneTile[y] - tilePos[y]) > self.player.special_minRange:
+            # Use Special
+            myDir = [0,0]
+            if eneTile[0] - tilePos[0] > 0: myDir[0] = 1
+            elif eneTile[0] - tilePos[0] < 0: myDir[0] = -1
+            if eneTile[1] - tilePos[1] > 0: myDir[1] = 1
+            elif eneTile[1] - tilePos[1] < 0: myDir[1] = -1
+
+            self.player.direction = myDir 
+            self.player.actions.useSpecial()
+
+    # Evade attacks
+
+    for i in base.players:
+      if i == self.player: continue
+      if i.actor.getZ() < 0.0: continue
+
+      # Only defend fast movement attacks
+      vel = i.ode_body.getLinearVel()
+      if not abs(vel[0]) > 6.0 and not abs(vel[1]) > 6.0: continue
+
+      # Get Distance
+      distance = math.sqrt(  (abs(self.player.actor.getX() - i.actor.getX()) ** 2) + (abs(self.player.actor.getY() - i.actor.getY()) ** 2))
+
+      # Defensive Special
+      if not self.player.specialCooldown and abs(distance) < self.player.special_range and abs(distance) > self.player.special_minRange:
+        
+        eneTile = i.getTilePos()
+        
+        # Use Special
+        myDir = [0,0]
+        if eneTile[0] - tilePos[0] > 0: myDir[0] = 1
+        elif eneTile[0] - tilePos[0] < 0: myDir[0] = -1
+        if eneTile[1] - tilePos[1] > 0: myDir[1] = 1
+        elif eneTile[1] - tilePos[1] < 0: myDir[1] = -1
+
+        self.player.direction = myDir 
+        self.player.actions.useSpecial()
+
+      # Sidestep
+      else:
+        if abs(distance) < 8.0:
+          eneTile = i.getTilePos()
+          myDir = [0,0]
+          if eneTile[0] - tilePos[0] > 0: myDir[0] = 1
+          elif eneTile[0] - tilePos[0] < 0: myDir[0] = -1
+          if eneTile[1] - tilePos[1] > 0: myDir[1] = 1
+          elif eneTile[1] - tilePos[1] < 0: myDir[1] = -1          
+
+          for x in range(len(myDir)):
+            if not myDir[x]:
+              for y in range(-1,1):
+                if y == 0: continue
+                myDir[x] = y
+                if not self.isObstacle(myDir):
+                  self.aiDir = myDir
+                  break
+              break
+    
 
     self.player.setMoveVal([.1,.1])
 
@@ -199,7 +272,7 @@ class ai:
 
     return None
     
-  def aiLockTarget(self):
+  def aiLockTarget(self, task = None):
 
     """
     Pick a target to persue.
@@ -214,13 +287,14 @@ class ai:
       if i == self.player: continue
       if i.actor.getZ() < 0.0: continue
 
-      distance = math.sqrt(  (abs(self.player.actor.getX() - i.actor.getZ()) ** 2) + (abs(self.player.actor.getY() - i.actor.getY()) ** 2))
+      distance = math.sqrt(  (abs(self.player.actor.getX() - i.actor.getX()) ** 2) + (abs(self.player.actor.getY() - i.actor.getY()) ** 2))
       if distance < minDist:
         target = i
         minDist = distance
 
     self.persue = target
 
+    if task: return task.again
 
   def stopAi(self):
     taskMgr.remove("Player_" + str(self.player.id) + "_AI")    
