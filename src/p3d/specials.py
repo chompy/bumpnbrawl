@@ -135,6 +135,17 @@ class specials(actions.actions):
             
             break
 
+      # Check for breakable block
+      for x in range(hitRange):
+        tilePos = self.player.getTilePos()
+        for y in range(len(self.player.direction)):
+          tilePos[y] = tilePos[y] + (self.player.direction[y] * x)
+          
+        testPos = (int(tilePos[0]), int(tilePos[1]), int(tilePos[2])) 
+        if testPos in base.tileCoords:
+          if base.tileCoords[testPos]['solid'] and base.tileCoords[testPos]['destructable']:
+             self.player.actions.breakDestructable(base.tileCoords[testPos], 2)
+
         
 
       return task.done

@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw
 from panda3d.core import NodePath, Texture
-from pandac.PandaModules import Fog, CardMaker
+from pandac.PandaModules import Fog, CardMaker, TransparencyAttrib, TextureStage, VBase3
 import ConfigParser, os, math
 
 class mapLoader:
@@ -16,7 +16,7 @@ class mapLoader:
     self.tileData.read(base.assetPath + "/maps.conf")
 
     # Set Theme
-    self.theme = "hq"
+    self.theme = "grassy"
 
     # Setup some Fog
     #color = (0, 0, 0, .8)
@@ -63,7 +63,7 @@ class mapLoader:
       bg_node.setZ(0)
 
       base.background = bg_node   
-      
+  
 
     # Make an array of possible player start points.
     base.playerStart = []
@@ -124,6 +124,29 @@ class mapLoader:
            
 
     self.staticMesh.flattenStrong()
+
+    # Load Surface
+    if os.path.exists(base.assetPath + "/tiles/themes/" + self.theme + "/surface.png"):
+      surfaceTex = loader.loadTexture(base.assetPath + "/tiles/themes/" + self.theme + "/surface.png")
+      surfaceTex.setWrapU(Texture.WMRepeat)
+      surfaceTex.setWrapV(Texture.WMRepeat)      
+
+      surface_frame = CardMaker("Map_Surface")
+      surface_frame.setFrame(-self.mapSize[0],self.mapSize[0],-self.mapSize[1],self.mapSize[1])
+      surface_frame_node = self.node.attachNewNode(surface_frame.generate())
+      surface_frame_node.setScale(1.5)
+      surface_frame_node.setP(-90)
+      surface_frame_node.setZ(-2.0)   
+      surface_frame_node.setX( (self.mapSize[0] / 2.0) * 1.0 )
+      surface_frame_node.setY( (self.mapSize[1] / 2.0) * 1.0 )      
+
+      surface_frame_node.setTransparency(TransparencyAttrib.MAlpha)
+      surface_frame_node.setTexture(surfaceTex)
+
+      lerper = NodePath("Map_Surface_Lerp")
+      surface_frame_node.setTexProjector(TextureStage.getDefault(), NodePath(), lerper)
+      surface_lerp = lerper.posInterval(60, VBase3(-.1, .1, 0))
+      surface_lerp.loop()      
 
   def loadTileBlock(self, bId, pos):
 

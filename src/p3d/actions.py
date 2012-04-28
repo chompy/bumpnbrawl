@@ -351,7 +351,7 @@ class actions:
       self.player.ode_body.setLinearVel(vel)
       self.player.isOnGround = False
 
-  def breakDestructable(self, tile):      
+  def breakDestructable(self, tile, power = None):      
 
     """
     Break a destructable tile.
@@ -371,8 +371,11 @@ class actions:
     vel = self.player.ode_body.getLinearVel()
     breakVal = 1
 
-    if abs(vel[0]) < 5.0 and abs(vel[1]) < 5.0: breakVal = 0
+    if abs(vel[0]) < 3.0 and abs(vel[1]) < 3.0: breakVal = 0
     if abs(vel[0]) > 9.0 or abs(vel[1]) > 9.0: breakVal = 2
+
+    # Manually set power if specified
+    if power: breakVal = power
 
     # Lower break counter
     try:
