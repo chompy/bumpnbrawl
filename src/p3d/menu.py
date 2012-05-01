@@ -10,7 +10,7 @@ from direct.fsm.FSM import FSM
 from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScaleInterval, LerpHprInterval
 from direct.interval.MetaInterval import Sequence
 
-from lib import menuBars, menuOptions, inputHelp
+from lib import menuBars, menuOptions, inputHelp, scrolledList
 import gameInput, lobby
 
 loadPrcFile("../../assets/Config.prc")
@@ -143,6 +143,12 @@ class mainMenu(FSM):
     self.menuOptions.node.setZ(.7)
     self.addWindowNode(self.menuOptions.node, -1, .8)
 
+    # Scrolled List
+    self.scrolledList = scrolledList.scrolledList([])
+    self.addWindowNode(self.scrolledList.node, -1, .8)    
+    self.scrolledList.node.setZ(.7)
+    
+
     # Random Background Character
     character = "chompy"
     self.randChar = Actor(base.assetPath + "/characters/" + character + "/model." + base.charExt,
@@ -211,7 +217,7 @@ class mainMenu(FSM):
     self.mainNode.reparentTo(aspect2d)
 
     OPTIONS = [
-      ['Online', self.request, ['Online']],
+      ['Online', self.request, ['ServerSelect']],
       ['Offline', self.request, ['Lobby']],
       ['Options', self.request, ['Options']],
       ['Quit', sys.exit, []]
@@ -485,6 +491,20 @@ class mainMenu(FSM):
         i.setNumber(x + 1, False)
 
     taskMgr.doMethodLater(1, base.gameLobby.node2d.hide, "MenuHideLobby", extraArgs=[])
+
+  def enterServerSelect(self):
+
+    """
+    Server selection menu.
+    """
+
+    OPTIONS = [
+      ['Back', self.request, ['Main']]
+    ]
+
+    self.menuBar.setOptions(OPTIONS, False)
+
+
 
   def defineInput(self, playerNo, inputDefine):
 
