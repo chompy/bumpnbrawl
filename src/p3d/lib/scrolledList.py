@@ -70,9 +70,8 @@ class scrolledList(DirectObject):
     self.items = []
 
     # Set Items
-    self.setItems([
-      'Test','Pewp','Porkchops','Cookies','Tubes',  'Test','Pewp','Porkchops','Cookies','Tubes',  'Test','Pewp','Porkchops','Cookies','Tubes',  'Test','Pewp','Porkchops','Cookies','Tubes'
-    ])
+    if items:
+      self.setItems(items)
 
     self.acceptInput()
     
@@ -163,6 +162,8 @@ class scrolledList(DirectObject):
     if self.selected - self.scroll > 13:
       self.scrollList(abs(13 - (self.selected - self.scroll)))
 
+    messenger.send("ScrolledList_Select", [self.selected])
+
   def changeSelection(self, inc):
 
     """
@@ -187,3 +188,45 @@ class scrolledList(DirectObject):
     for x in range(4):
       base.accept("p" + str(x + 1) + "_up", self.changeSelection, [-1])
       base.accept("p" + str(x + 1) + "_down", self.changeSelection, [1]) 
+
+  def ignoreInput(self):
+
+    """
+    Ignore all inputs.
+    """
+
+    base.ignore("wheel_up")      
+    base.ignore("wheel_down")    
+
+    for x in range(4):
+      base.ignore("p" + str(x + 1) + "_up")
+      base.ignore("p" + str(x + 1) + "_down")
+
+  def show(self):
+
+    """
+    Show scrolled list and enable inputs.
+    """
+
+    self.node.show()
+    self.acceptInput()
+    
+    lerp = LerpColorScaleInterval(self.node, .5, (1,1,1,1), startColorScale=(1,1,1,0))
+    lerp.start()    
+
+  def hide(self, disableInput=True, fadeOut=True):
+
+    """
+    Hide scrolled list and optionally disable input.
+    """
+
+    if fadeOut:
+      lerp = LerpColorScaleInterval(self.node, .5, (1,1,1,0), startColorScale=(1,1,1,1))
+      lerp.start()    
+
+      taskMgr.doMethodLater(.6, self.node.hide, "ScrolledList_Hide", extraArgs=[])
+    else:
+      self.node.hide()
+
+    if disableInput:
+      self.ignoreInput()      

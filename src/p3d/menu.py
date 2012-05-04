@@ -145,9 +145,9 @@ class mainMenu(FSM):
 
     # Scrolled List
     self.scrolledList = scrolledList.scrolledList([])
-    self.addWindowNode(self.scrolledList.node, -1, .8)    
+    self.addWindowNode(self.scrolledList.node, -1, .7)    
     self.scrolledList.node.setZ(.7)
-    
+    self.scrolledList.hide(True, False)    
 
     # Random Background Character
     character = "chompy"
@@ -224,6 +224,9 @@ class mainMenu(FSM):
     ]
 
     self.menuBar.setOptions(OPTIONS)
+
+    logoLerp = LerpColorScaleInterval(self.logo, .7, (1,1,1,1))
+    logoLerp.start()
 
     # Input Help Options
     self.inputHelp.setOptions([
@@ -472,8 +475,6 @@ class mainMenu(FSM):
       base.ignore("p" + str(x + 1) + "_btna")
       base.ignore("p" + str(x + 1) + "_btnb")   
 
-    logoLerp = LerpColorScaleInterval(self.logo, .7, (1,1,1,1))
-    logoLerp.start()
 
     lobbyLerp = LerpColorScaleInterval(base.gameLobby.node2d, .7, (1,1,1,0), (1,1,1,1))
     lobbyLerp.start()
@@ -502,8 +503,135 @@ class mainMenu(FSM):
       ['Back', self.request, ['Main']]
     ]
 
+    # Input Help Options
+    self.inputHelp.setOptions([
+      ['Confirm', 'p1_btna'],    
+      ['Back', 'p1_btnb'],
+    ])      
+
+    # Add player input back button
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btnb", self.request, ['Main'])   
+
     self.menuBar.setOptions(OPTIONS, False)
 
+    logoLerp = LerpColorScaleInterval(self.logo, .7, (1,1,1,0))
+    logoLerp.start()    
+
+    # Make a server list
+    self.servers = [
+      ['ChompServ', 'chompy.co'],
+      ['ChompServPro', 'pro.chompy.co']
+    ]
+
+    scrollList = []
+    for i in self.servers:
+      scrollList.append(i[0])
+
+    self.scrolledList.setItems(scrollList)
+    self.scrolledList.show()
+
+    # Selection Info Text
+    self.serverInfoNode = NodePath("ServerInformation")
+    self.serverInfoNode.reparentTo(self.scrolledList.node)
+    self.serverInfoNode.setX(1.35)
+    self.serverInfoNode.hide()
+
+    self.serverNameLabel = OnscreenText(
+        text = "Server Name:",
+        fg=(1,1,1,1), 
+        shadow=(0,0,0,.6),
+        align=TextNode.ALeft, 
+        font=self.boldFont, 
+        pos = (0, -.1), 
+        scale = 0.06, 
+        parent=self.serverInfoNode
+        )    
+    
+    self.serverName = OnscreenText(
+        text = "Test Test",
+        fg=(1,1,1,1), 
+        shadow=(0,0,0,.6),
+        align=TextNode.ALeft, 
+        font=self.regFont, 
+        pos = (0, -.175), 
+        scale = 0.06, 
+        parent=self.serverInfoNode
+        )    
+
+    self.serverAddressLabel = OnscreenText(
+        text = "Server Address:",
+        fg=(1,1,1,1), 
+        shadow=(0,0,0,.6),
+        align=TextNode.ALeft, 
+        font=self.boldFont, 
+        pos = (0, -.3), 
+        scale = 0.06, 
+        parent=self.serverInfoNode
+        )    
+    
+    self.serverAddress = OnscreenText(
+        text = "chompy.co",
+        fg=(1,1,1,1), 
+        shadow=(0,0,0,.6),
+        align=TextNode.ALeft, 
+        font=self.regFont, 
+        pos = (0, -.375), 
+        scale = 0.06, 
+        parent=self.serverInfoNode
+        )   
+
+    self.serverResponseLabel = OnscreenText(
+        text = "Reponse Time:",
+        fg=(1,1,1,1), 
+        shadow=(0,0,0,.6),
+        align=TextNode.ALeft, 
+        font=self.boldFont, 
+        pos = (0, -.5), 
+        scale = 0.06, 
+        parent=self.serverInfoNode
+        )    
+    
+    self.serverResponse = OnscreenText(
+        text = "80ms",
+        fg=(1,1,1,1), 
+        shadow=(0,0,0,.6),
+        align=TextNode.ALeft, 
+        font=self.regFont, 
+        pos = (0, -.575), 
+        scale = 0.06, 
+        parent=self.serverInfoNode
+        )       
+
+    base.accept("ScrolledList_Select", self.updateServerInfo)            
+
+  def exitServerSelect(self):
+
+    """
+    Exit server selection menu.
+    """
+
+    self.scrolledList.hide() 
+    self.serverNameLabel.destroy()   
+    self.serverName.destroy()
+    self.serverAddressLabel.destroy()
+    self.serverAddress.destroy()    
+    self.serverResponseLabel.destroy()    
+    self.serverResponse.destroy()
+    self.serverInfoNode.removeNode()
+
+
+  def updateServerInfo(self, itemNo):
+
+    """
+    Update server info text nodes.
+    """
+
+    self.serverInfoNode.show()
+    item = self.servers[itemNo]
+
+    self.serverName.setText(item[0])
+    self.serverAddress.setText(item[1])
 
 
   def defineInput(self, playerNo, inputDefine):

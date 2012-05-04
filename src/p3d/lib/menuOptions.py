@@ -286,17 +286,20 @@ class menuOptions(DirectObject):
     base.ignore("p1_btna")
     base.ignore("p1_left")    
     base.ignore("p1_right")    
-    if len(self.scrollOptions[self.selected]) > 1:
-      for x in range(4):
-        base.accept("p" + str(x + 1) + "_right", self.scrollOption, [1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
-        base.accept("p" + str(x + 1) + "_left", self.scrollOption, [-1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
 
-    # Set button press
-    else:
-      if self.scrollOptions[self.selected][0][1]:
+    try:
+      if len(self.scrollOptions[self.selected]) > 1:
         for x in range(4):
-          base.accept("p" + str(x + 1) + "_btna", self.scrollOptions[self.selected][0][1], self.scrollOptions[self.selected][0][2])
-    
+          base.accept("p" + str(x + 1) + "_right", self.scrollOption, [1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
+          base.accept("p" + str(x + 1) + "_left", self.scrollOption, [-1, self.optionNodes[self.selected][2], self.scrollOptions[self.selected]])
+
+      # Set button press
+      else:
+        if self.scrollOptions[self.selected][0][1]:
+          for x in range(4):
+            base.accept("p" + str(x + 1) + "_btna", self.scrollOptions[self.selected][0][1], self.scrollOptions[self.selected][0][2])
+    except IndexError:
+      return None
         
 
       
