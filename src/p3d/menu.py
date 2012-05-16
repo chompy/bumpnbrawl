@@ -6,6 +6,7 @@ from direct.interval.LerpInterval import LerpHprInterval
 from panda3d.core import loadPrcFile
 from direct.gui.OnscreenText import OnscreenText
 from direct.gui.OnscreenImage import OnscreenImage
+from direct.gui.DirectGui import *
 from direct.fsm.FSM import FSM
 from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScaleInterval, LerpHprInterval
 from direct.interval.MetaInterval import Sequence
@@ -601,7 +602,18 @@ class mainMenu(FSM):
         pos = (0, -.575), 
         scale = 0.06, 
         parent=self.serverInfoNode
-        )       
+        )
+
+    self.serverSelectBtn = DirectButton(
+      text = ("Go >>"),
+      parent=self.serverInfoNode,
+      text_fg=(1,1,1,1), 
+      text_shadow=(0,0,0,.6),
+      text_font=self.regFont,
+      text_align=TextNode.ALeft,
+      pos = (0, 0, -.8),
+      scale = 0.07
+    )
 
     base.accept("ScrolledList_Select", self.updateServerInfo)            
 
@@ -610,6 +622,9 @@ class mainMenu(FSM):
     """
     Exit server selection menu.
     """
+
+    # Get the server that was selected
+    self.selectedServer = self.servers[self.scrolledList.selected]
 
     self.scrolledList.hide() 
     self.serverNameLabel.destroy()   
