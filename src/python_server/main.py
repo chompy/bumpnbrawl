@@ -1,15 +1,11 @@
 import asyncore
 import socket
+from network_events import clientConfirm
 
 # MESSAGE ID REFERENCE
-USERNAME = chr(1)
-USERID = chr(2)
-JOIN_CHANNEL = chr(3)
-CLIENT_DATA = chr(4)    # NO OF CHARACTERS:
-CHARACTER_DATA = chr(5) # CHAR SLOT:CHAR COLOR CODE:CHAR SKIN:START SLOT:CHAR NAME/playername [012chompy/Renoki]
-PLAYER_INPUT = chr(6)
-POSITION = chr(7)
-#CHAT = chr(4)
+CLIENT_CONFIRM = chr(1)
+CLIENT_ID = chr(2)
+
 
 class BnBClientHandler(asyncore.dispatcher_with_send):
 
@@ -17,117 +13,53 @@ class BnBClientHandler(asyncore.dispatcher_with_send):
 
     asyncore.dispatcher_with_send.__init__(self, sock)
     self.buffer = ""
-    self.prepareMsg(USERNAME, "")
 
     # Vars
-    self.name = None
     self.id = userid
     self.isActive = True
-    self.channel = None
+    self.gameChannel = None
+    self.clientConfirm = False
+    
     self.playerData = {}
 
+    self.prepareMsg(CLIENT_CONFIRM, "")
+
   def handle_read(self):
+
+    """
+    Handles reading incoming network data.
+    """
+
+    # Recieve 1024 bytes
     data = self.recv(1024)
+
+    # Done if no data was sent.
     if not data: return None
 
+    # Split data up by line.
     split = data.split("\n")
 
+    # Read data line by line.
     for data in split:
 
+      # If no data continue to next line.
       if not data: continue
 
+      # Get Message ID (The first character)
       msgId = data[0]
-      data = data[1:]
 
-      # Retrieve Player Username
-      if msgId == USERNAME:
-        self.name = data
-        print "Player #%s username is %s." % (str(self.id), self.name)
+      # Get the data sent.
+      data = data[1:]    
 
-        self.prepareMsg(USERID, chr(self.id))     
+      # Determine what type of message was sent.
 
-      # Retrieve Channel Join Request
-      elif msgId == JOIN_CHANNEL:
-        channelId = ord(data[0])
+      # Client Confirm (Security Check)
+      if msgId == CLIENT_CONFIRM:
+        clientConfirm.clientConfirm(self, data)
 
-        joinChannel = server.joinChannel(channelId, self)
-
-        if joinChannel:
-          print "Player #%s has joined channel #%s." % (str(self.id), channelId)
-          self.channel = channelId
-          
-        else:
-          print "Player #%s requested to join channel #%s but the channel is full." % (str(self.id), channelId)      
- 
-        self.prepareMsg(JOIN_CHANNEL, chr( int(joinChannel) ))
-
-      # Retrieve Character Data
-      elif msgId == CHARACTER_DATA:
-
-        slot = int(ord(data[0]))
-        color = int(ord(data[1]))
-        skin = int(ord(data[2]))   
-        name = str(data[3:])
-
-        if name:
-
-          print "Player #%s sent character data for local slot #%s." % (str(self.id), str(slot))
-
-          # Get Start Pos
-          start = 0
-          for i in server.users:
-            if i.channel == self.channel:
-              start += len(i.playerData)
-
-          start += 1
-
-          self.playerData[slot] = [name, color, skin, start]
-
-          # Send my character data to everyone
-          for i in server.users:
-            if not i == self and i.channel == self.channel:
-              i.prepareMsg(CHARACTER_DATA, chr(self.id) + chr(slot) + chr(color) + chr(skin) + chr(start) + name)
-
-          # Get everyone's player data
-          for i in server.users:
-            for x in i.playerData:
-              if i.channel == self.channel:
-                self.prepareMsg(CHARACTER_DATA, chr(i.id) + chr(x) + chr(i.playerData[x][1]) + chr(i.playerData[x][2]) + chr(i.playerData[x][3]) + i.playerData[x][0])
-
-        else:
-          del self.playerData[slot]
+      elif not self.clientConfirm:
+        self.close()
         
-
-      # Player Input
-      elif msgId == PLAYER_INPUT:
-
-        pInput = str(data)
-
-        #print "Player #%s sent input '%s'." % (str(self.id), pInput)
-
-        # Send to other players
-        for i in server.users:
-          if i.channel == self.channel and not i == self and self.channel > 0:
-            i.prepareMsg(PLAYER_INPUT, chr(self.id) + pInput)
-
-      # Player Position/Dir
-      elif msgId == POSITION:
-
-        slot = int(ord(data[0]))
-
-        otherData = data[1:].split("x")
-        x = float(otherData[0])
-        y = float(otherData[1])
-        z = float(otherData[2])
-        h = float(otherData[3])
-
-        for i in server.users:
-          if not i == self:
-            i.prepareMsg(POSITION, chr(self.id) + chr(slot) + str(x) + "x" + str(y) + "x" + str(z) + "x" + str(h))
-
-      else:
-        print "Player #%s sent unrecognized message type, #%s." % (str(self.id), str(ord(msgId)))
-             
 
   def prepareMsg(self, msgType, msg):
 
@@ -135,12 +67,23 @@ class BnBClientHandler(asyncore.dispatcher_with_send):
     Prepare a message to be sent.
     """
 
+    # Add message to buffer (will get sent later).
     self.buffer += msgType + msg + "\n"
 
   def writable(self):
+
+    """
+    Not sure?
+    """
+  
     return (len(self.buffer) > 0)
 
   def handle_write(self):
+
+    """
+    Handles sending data to clients.
+    """
+  
     sent = self.send(self.buffer)
     if sent:
       self.buffer = self.buffer[sent:]
@@ -148,6 +91,11 @@ class BnBClientHandler(asyncore.dispatcher_with_send):
       self.buffer = ""
 
   def handle_close(self):
+
+    """
+    Handles client disconnect event.
+    """
+  
     print "Player #%s has disconnected." % str(self.id)
 
     # Send disconnect to other clients
@@ -167,8 +115,9 @@ class BnBServer(asyncore.dispatcher):
   def __init__(self, host, port):
 
     # Vars
-    self.users = []
+    self.clients = []
     self.idCt = 0
+    self.gameChannels = {}
 
     # Network Init
     asyncore.dispatcher.__init__(self)
@@ -177,23 +126,27 @@ class BnBServer(asyncore.dispatcher):
     self.bind((host, port))
     self.listen(5)
 
-    self.channels = {}
-    self.channelMode = {}   # Channel Modes: 0 = Lobby; 1 = Game Play
-
-    print "BumpNBrawl Server v1 - Server started on port %s." % str(port)
+    # Print a message saying server has started.
+    print "BumpNBrawl Server v2 - Server started on port %s." % str(port)
 
   def handle_accept(self):
+
+    """
+    Handles new client connections.
+    """
+  
     pair = self.accept()
     if pair is None:
       pass
     else:
       sock, addr = pair
 
+      # Find an ID to grant new client.
       myId = None
       for i in range(self.idCt):
-        if not self.users[i].isActive:
+        if not self.clients[i].isActive:
           myId = i
-          self.users[i].__init__(sock, myId)
+          self.clients[i].__init__(sock, myId)
           break
           
       if not myId:
@@ -201,37 +154,9 @@ class BnBServer(asyncore.dispatcher):
         myId = self.idCt
 
         handler = BnBClientHandler(sock, myId)
-        self.users.append(handler)
+        self.clients.append(handler)
 
-      print 'New Player connected with ID # %s from %s.' % (str(myId), repr(addr))
-
-  def joinChannel(self, chanId, client):
-
-    if chanId > 255: return False
-    if chanId < 0: return False
-
-    try:
-      self.channels[chanId]
-    except:
-      self.channels[chanId] = []
-      self.channelMode[chanId] = 1
-
-    if len(self.channels[chanId]) >= 8:
-      return False
-
-    self.channels[chanId].append(client)
-    return True
-
-  def clearUserFromChannel(self, chanId, userId):
-
-    if chanId > 255: return False
-    if chanId < 0: return False    
-    for y in range(len(self.channels[chanId])):
-      if self.channels[chanId][y].id ==  userId:
-        self.channels[chanId].remove(self.channels[chanId][y])
-        print "Player #%s has left channel #%s." % (str(userId), str(chanId))
-        break
-      
+      print 'New client connected with ID # %s from %s.' % (str(myId), repr(addr))
           
     
 

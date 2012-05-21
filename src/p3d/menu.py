@@ -12,7 +12,7 @@ from direct.interval.LerpInterval import LerpColorScaleInterval, LerpPosHprScale
 from direct.interval.MetaInterval import Sequence
 
 from lib import menuBars, menuOptions, inputHelp, scrolledList
-import gameInput, lobby
+import gameInput, lobby, network
 
 loadPrcFile("../../assets/Config.prc")
 
@@ -510,19 +510,24 @@ class mainMenu(FSM):
       ['Back', 'p1_btnb'],
     ])      
 
+    self.menuBar.setOptions(OPTIONS, False)
+
     # Add player input back button
     for x in range(4):
       base.accept("p" + str(x + 1) + "_btnb", self.request, ['Main'])   
 
-    self.menuBar.setOptions(OPTIONS, False)
+    # Server connection
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btna", self.request, ['ServerConnect'])   
 
     logoLerp = LerpColorScaleInterval(self.logo, .7, (1,1,1,0))
     logoLerp.start()    
 
     # Make a server list
     self.servers = [
+      ['Local Machine', 'localhost'],   
       ['ChompServ', 'chompy.co'],
-      ['ChompServPro', 'pro.chompy.co']
+      ['ChompServPro', 'pro.chompy.co']      
     ]
 
     scrollList = []
@@ -601,7 +606,7 @@ class mainMenu(FSM):
         font=self.regFont, 
         pos = (0, -.575), 
         scale = 0.06, 
-        parent=self.serverInfoNode
+        parent=self.serverInfoNode,
         )
 
     self.serverSelectBtn = DirectButton(
@@ -612,10 +617,12 @@ class mainMenu(FSM):
       text_font=self.regFont,
       text_align=TextNode.ALeft,
       pos = (0, 0, -.8),
-      scale = 0.07
+      scale = 0.07,
+      command=self.request,
+      extraArgs=['ServerConnect']
     )
 
-    base.accept("ScrolledList_Select", self.updateServerInfo)            
+    base.accept("ScrolledList_Select", self.updateServerInfo)         
 
   def exitServerSelect(self):
 
@@ -635,6 +642,58 @@ class mainMenu(FSM):
     self.serverResponse.destroy()
     self.serverInfoNode.removeNode()
 
+  def enterServerConnect(self):
+
+    """
+    Server connect screen.
+    """
+
+    OPTIONS = [
+      ['Back', self.request, ['ServerSelect']]
+    ]
+
+    # Input Help Options
+    self.inputHelp.setOptions([  
+      ['Back', 'p1_btnb'],
+    ])      
+
+    self.menuBar.setOptions(OPTIONS, False)
+
+    # Add player input back button
+    for x in range(4):
+      base.accept("p" + str(x + 1) + "_btnb", self.request, ['ServerSelect'])   
+
+    # Define whether or not connection was successful
+    self.isConnectSuccess = False
+
+    self.serverMessage = OnscreenText(
+    text = "Connecting to " + self.selectedServer[0] + "...",
+    fg=(1,1,1,1), 
+    shadow=(0,0,0,.6),
+    align=TextNode.ACenter, 
+    font=self.boldFont, 
+    pos = (0, 0), 
+    scale = 0.06, 
+    parent=aspect2d
+    ) 
+
+    if not self.selectedServer[1]: self.request('ServerSelect')
+    network.connectToServer(self.selectedServer[1])
+
+    base.accept("network-connect", self.serverMessage.setText, ['Connected. Verifying client...'])
+    base.accept("network-close", self.serverMessage.setText, ['Disconnected.'])
+    
+
+  def exitServerConnect(self):
+
+    """
+    Done connecting to server.
+    """
+
+    self.serverMessage.destroy()
+    base.ignore("network-connect")
+    base.ignore("network-close")
+  
 
   def updateServerInfo(self, itemNo):
 

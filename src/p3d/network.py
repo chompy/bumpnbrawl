@@ -4,18 +4,16 @@ from direct.task import Task
 
 import direct.directbase.DirectStart
 from direct.showbase.ShowBase import ShowBase
+import time, math, hashlib
 
 timeout_in_miliseconds=3000
 
+CLIENT_VERSION = 1
+
 # MESSAGE ID REFERENCE
-USERNAME = chr(1)
-USERID = chr(2)
-JOIN_CHANNEL = chr(3)
-CLIENT_DATA = chr(4)    # NO OF CHARACTERS:
-CHARACTER_DATA = chr(5) # CHAR SLOT:CHAR COLOR CODE:CHAR SKIN:START SLOT:CHAR NAME/playername [012chompy/Renoki]
-PLAYER_INPUT = chr(6)
-POSITION = chr(7)
-#CHAT = chr(4)
+CLIENT_CONFIRM = chr(1)
+CLIENT_ID = chr(2)
+
 
 class networkHandler(asyncore.dispatcher):
 
@@ -27,139 +25,80 @@ class networkHandler(asyncore.dispatcher):
     self.connect((host,port))
     self.buffer = ""
 
-    self.name = "Chompy"
     self.id = None
-    self.gameChannel = 1
-
+    self.gameChannel = None
     self.netPlayers = {}
 
     # Network send events
-    base.accept("network-send", self.sendEventMsg)
+    #base.accept("network-send", self.sendEventMsg)
 
   def handle_connect(self):
-    print "Connected to host."
+
+    """
+    Handle connecting to server.
+    """
+  
+    messenger.send("network-connect")
+    print "Connected to server..."
+
+    # Client Confirm
+    #self.prepareMsg(CLIENT_CONFIRM, CLIENT_SECURITY)
 
   def handle_close(self):
+
+    """
+    Handle closing connection to server.
+    """
+  
     self.close()
+    messenger.send("network-close")
+    print "Connection closed."
 
   def handle_read(self):
 
+    """
+    Handle reading data from server.
+    """
+
+    # Recieve 1024 bytes of data.
     data = self.recv(1024)
+
+    # Do nothing if there is no data.
     if data <= 0: return None
 
+    # Split data up by line.
     split = data.split("\n")
 
+    # Read data line by line.
     for data in split:
 
+      # Goto next line if no data on this line.
       if not data: continue
 
+      # Get Message ID (the first character).
       msgId = data[0]
+
+      # Get data.
       data = data[1:]
 
-      # Send Player Username
-      if msgId == USERNAME:
-        print "Server is requesting username for %s." % self.name
-        self.prepareMsg(USERNAME, self.name)
+      # Determine what message type and do correct action.
 
-      # Retrieve User ID
-      elif msgId == USERID:
-        self.id = int(ord(data))
-        print "Recieved ID#%s for player %s." % (str(self.id), self.name)
+      # Client confirmation (security check).
+      if msgId == CLIENT_CONFIRM:
 
-        # Join Channelo
-        print "Attempting to join channel #%s." % str(self.gameChannel)
-        self.prepareMsg(JOIN_CHANNEL, chr(self.gameChannel))
-  
-      # Join Channel Success
-      elif msgId == JOIN_CHANNEL:
-        success = bool(ord(data))
+        # SECURITY STRING
+        cTime = math.ceil(time.time())
+        h = hashlib.new('ripemd160')
+        h.update(str(cTime) + "_" + str(CLIENT_VERSION) + "_BumpNBrawl_SuperSecret#ChompR0x")
 
-        if success:
-          print "Joined channel #%s." % str(self.gameChannel)
+        CLIENT_SECURITY = h.hexdigest()
+      
+        self.prepareMsg(CLIENT_CONFIRM, CLIENT_SECURITY)
 
-          # Send Character data
-          for i in base.players:
-            if i.local:
-              self.prepareMsg(CHARACTER_DATA, str(chr(int(i.controls)) + chr(int(1)) + chr(int(1)) + i.character))
-          
-        else:
-          print "Failed to join channel #%s." % str(self.gameChannel)
-
-      # Character data
-      elif msgId == CHARACTER_DATA:
-
-        pId = int(ord(data[0]))
-        slot = int(ord(data[1]))
-        color = int(ord(data[2]))
-        skin = int(ord(data[3]))
-        start = int(ord(data[4]))
-        name = str(data[5:])
-
-        if name:
-
-          # If local player then we probably need start pos
-          if pId == self.id:
-            for i in base.players:
-              if i.local and int(i.controls) == int(slot):            
-                i.startPos = base.playerStart[start - 1]
-                i.ode_body.setPosition(i.startPos[0], i.startPos[1], i.startPos[2] + 20.0 )     
-                break
-            return True             
-
-          # If player already exists don't do anything
-          try:
-            for i in self.netPlayers[pId]:
-              if i.controls == slot:
-                return None
-          except KeyError: 1
-        
-          char = player.player(name, False, slot, pId)
-          base.players.append(char)
-
-          try:
-            self.netPlayers[pId].append(char)
-          except:
-            self.netPlayers[pId] = [char]        
-
-        # If no character name given it's assumed we are removing this player slot.
-        else:
-          for i in base.players:
-            if i.onlineId == pId and int(i.controls) == slot:
-              # TODO: Player removal stuff. [Probably call function]
-              print "Player removed. PID%s SLOT%s." % (str(pId), str(slot))
-              self.netPlayers[pId].remove(i)
-              i.destroy()
-
-      # Get Player Inputs
-      elif msgId == PLAYER_INPUT:
-
-        pId = int(ord(data[0]))
-        messenger.send(str(pId) + data[1:])
-                      
-      # Sync up player positions
-      elif msgId == POSITION:   
-        pId = int(ord(data[0]))
-        slot = int(ord(data[1]))
-        otherData = str(data[2:]).split("x")
-
-        x = float(otherData[0])
-        y = float(otherData[1])
-        z = float(otherData[2])
-        h = float(otherData[3])
-
-        try:
-          for i in self.netPlayers[pId]:
-            if int(i.controls) == slot:
-              i.ode_body.setPosition((x,y,z))
-              i.actor.setH(h)
-        except KeyError: 1
-
+      # Unregonized message type.
       else:
-
         print "Server sent unrecognized message id #%s." % str(ord(msgId))
         
-    
-
 
   def prepareMsg(self, msgType, msg):
 
@@ -176,16 +115,6 @@ class networkHandler(asyncore.dispatcher):
     """
 
     msgType = None
-    if msgTypeStr == "character_data":
-      msgType = CHARACTER_DATA
-      
-    elif msgTypeStr == "position":
-      return POSITION
-    elif msgTypeStr == "player_input":
-      return PLAYER_INPUT
-    else:
-      return None
-
     return msgType
 
   def sendEventMsg(self, msgType, msg):
@@ -206,7 +135,19 @@ def doNetworkUpdate(task):
   asyncore.loop(count = 1, timeout=0)
   return task.cont
 
-client = networkHandler("chompy.co", 31592)    
-taskMgr.add(doNetworkUpdate, "NetworkLoop")
+# Functions for disconnecting and connecting to server.
+
+client = None
+def connectToServer(host):
+  client = networkHandler(host, 31592)    
+  taskMgr.add(doNetworkUpdate, "NetworkLoop")
+
+def disconnect():
+
+  taskMgr.remove("NetworkLoop")
+  try:
+    client.close()
+  except:
+    return None
 
   
